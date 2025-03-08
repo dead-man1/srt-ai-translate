@@ -261,8 +261,6 @@ function htmlForm() {
 </head>
 <body>
     <div class="container">
-    <body>
-    <div class="container">
         <h1>SRT Translator to Any Language</h1>
         <p style="color: #ff4444; font-weight: bold;">⚠️ Please use a VPN to access the Gemini API, as Iran is currently under sanctions.</p>
         <p>Upload an SRT file or paste SRT content and provide your Gemini API key to translate the text to any language.</p>
