@@ -261,12 +261,28 @@ function htmlForm() {
 </head>
 <body>
     <div class="container">
+    <body>
+    <div class="container">
         <h1>SRT Translator to Any Language</h1>
         <p style="color: #ff4444; font-weight: bold;">⚠️ Please use a VPN to access the Gemini API, as Iran is currently under sanctions.</p>
-        <p>Upload an SRT file and provide your Gemini API key to translate the text to any language.</p>
+        <p>Upload an SRT file or paste SRT content and provide your Gemini API key to translate the text to any language.</p>
         <form id="translate-form" onsubmit="return handleTranslate(event)">
-            <label for="file">Upload SRT File:</label>
-            <input type="file" id="file" name="file" accept=".srt" required>
+            <label>Input Method:</label>
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                <label><input type="radio" name="input_method" value="file" checked> Upload File</label>
+                <label><input type="radio" name="input_method" value="text"> Paste Text</label>
+            </div>
+            
+            <div id="file-input" class="input-section">
+                <label for="file">Upload SRT File:</label>
+                <input type="file" id="file" name="file" accept=".srt">
+            </div>
+            
+            <div id="text-input" class="input-section" style="display: none;">
+                <label for="srt_text">Paste SRT Content:</label>
+                <textarea id="srt_text" name="srt_text" rows="6" placeholder="Paste your SRT content here..." style="width: 100%; padding: 0.75rem; border-radius: 8px; background: rgba(255, 255, 255, 0.1); color: #e0e0e0; border: 1px solid rgba(255, 255, 255, 0.2); resize: vertical;"></textarea>
+            </div>
+
             <label for="api_key">Gemini API Key:</label>
             <div class="api-key-container">
                 <input type="password" id="api_key" name="api_key" placeholder="Enter your Gemini API key" required>
@@ -274,6 +290,7 @@ function htmlForm() {
                     <i class="fas fa-eye"></i>
                 </button>
             </div>
+            <!-- Rest of the form remains the same -->
             <div class="remember-me">
                 <input type="checkbox" id="remember_me" name="remember_me">
                 <label for="remember_me">Remember my API key</label>
@@ -283,7 +300,7 @@ function htmlForm() {
             <label for="quota_delay">Quota Delay (ms):</label>
             <input type="number" id="quota_delay" name="quota_delay" min="1000" value="60000" placeholder="Quota delay in milliseconds" required>
             <label for="chunk_count">Number of Chunks:</label>
-            <input type="number" id="chunk_count" name="chunk_count" min="1" value="1" placeholder="Number of chunks" required>
+            <input type="number" id="chunk_count" name="chunk_count" min="1" value="20" placeholder="Number of chunks" required>
             <label for="lang">Language:</label>
             <input type="text" id="lang" name="lang" value="Persian (Farsi)" placeholder="Language:">
             <button type="submit">Translate</button>
@@ -337,7 +354,7 @@ function htmlForm() {
         window.addEventListener('load', loadApiKey);
 
         function parseSRT(srtContent) {
-            const entries = srtContent.trim().split('\\n\\n');
+            const entries = srtContent.replace(/\\n+$/, '').split('\\n\\n');
             const parsedEntries = [];
             for (const entry of entries) {
                 const lines = entry.split('\\n');
@@ -448,84 +465,122 @@ function htmlForm() {
             return srtContent.trim();
         }
 
+        // Add input method toggle
+        document.addEventListener('change', (e) => {
+            if (e.target.name === 'input_method') {
+                const fileInput = document.getElementById('file-input');
+                const textInput = document.getElementById('text-input');
+                const fileElement = document.getElementById('file');
+                const textElement = document.getElementById('srt_text');
+                
+                if (e.target.value === 'file') {
+                    fileInput.style.display = 'block';
+                    textInput.style.display = 'none';
+                    fileElement.setAttribute('required', '');
+                    textElement.removeAttribute('required');
+                } else {
+                    fileInput.style.display = 'none';
+                    textInput.style.display = 'block';
+                    fileElement.removeAttribute('required');
+                    textElement.setAttribute('required', '');
+                }
+            }
+        });
+
+        // Modified handleTranslate function
         async function handleTranslate(event) {
-    event.preventDefault();
+            event.preventDefault();
 
-    const fileInput = document.getElementById('file');
-    const apiKey = document.getElementById('api_key').value;
-    const lang = document.getElementById('lang').value;
-    const baseDelay = parseInt(document.getElementById('base_delay').value, 10);
-    const quotaDelay = parseInt(document.getElementById('quota_delay').value, 10);
-    const chunkCount = parseInt(document.getElementById('chunk_count').value, 10);
-    const progressContainer = document.getElementById('progress-container');
-    const progressBar = document.getElementById('progress');
-    const progressText = document.getElementById('progress-text');
-    const downloadLink = document.getElementById('download-link');
-    const errorMessage = document.getElementById('error-message');
-    const submitButton = document.querySelector('button[type="submit"]');
+            const inputMethod = document.querySelector('input[name="input_method"]:checked').value;
+            const fileInput = document.getElementById('file');
+            const srtText = document.getElementById('srt_text');
+            const apiKey = document.getElementById('api_key').value;
+            const lang = document.getElementById('lang').value;
+            const baseDelay = parseInt(document.getElementById('base_delay').value, 10);
+            const quotaDelay = parseInt(document.getElementById('quota_delay').value, 10);
+            const chunkCount = parseInt(document.getElementById('chunk_count').value, 10);
+            const progressContainer = document.getElementById('progress-container');
+            const progressBar = document.getElementById('progress');
+            const progressText = document.getElementById('progress-text');
+            const downloadLink = document.getElementById('download-link');
+            const errorMessage = document.getElementById('error-message');
+            const submitButton = document.querySelector('button[type="submit"]');
 
-    // Validate inputs
-    if (isNaN(baseDelay) || baseDelay < 100) {
-        errorMessage.textContent = 'Base delay must be at least 100ms.';
-        errorMessage.style.display = 'block';
-        return false;
-    }
-    if (isNaN(quotaDelay) || quotaDelay < 1000) {
-        errorMessage.textContent = 'Quota delay must be at least 1000ms.';
-        errorMessage.style.display = 'block';
-        return false;
-    }
-    if (isNaN(chunkCount) || chunkCount < 1) {
-        errorMessage.textContent = 'Number of chunks must be at least 1.';
-        errorMessage.style.display = 'block';
-        return false;
-    }
-    if (!fileInput.files[0]) {
-        errorMessage.textContent = 'Please upload an SRT file.';
-        errorMessage.style.display = 'block';
-        return false;
-    }
+            // Validate inputs
+            if (isNaN(baseDelay) || baseDelay < 100) {
+                errorMessage.textContent = 'Base delay must be at least 100ms.';
+                errorMessage.style.display = 'block';
+                return false;
+            }
+            if (isNaN(quotaDelay) || quotaDelay < 1000) {
+                errorMessage.textContent = 'Quota delay must be at least 1000ms.';
+                errorMessage.style.display = 'block';
+                return false;
+            }
+            if (isNaN(chunkCount) || chunkCount < 1) {
+                errorMessage.textContent = 'Number of chunks must be at least 1.';
+                errorMessage.style.display = 'block';
+                return false;
+            }
 
-    // Reset UI
-    progressContainer.style.display = 'none';
-    downloadLink.style.display = 'none';
-    errorMessage.style.display = 'none';
-    submitButton.disabled = true;
+            let srtContent, fileName;
+            if (inputMethod === 'file') {
+                if (!fileInput.files[0]) {
+                    errorMessage.textContent = 'Please upload an SRT file.';
+                    errorMessage.style.display = 'block';
+                    return false;
+                }
+                const file = fileInput.files[0];
+                srtContent = await file.text();
+                fileName = file.name;
+            } else {
+                if (!srtText.value.trim()) {
+                    errorMessage.textContent = 'Please paste SRT content.';
+                    errorMessage.style.display = 'block';
+                    return false;
+                }
+                srtContent = srtText.value;
+                fileName = \`translated_\${new Date().getTime()}\`; // Default name for text input
+            }
 
-    try {
-        const file = fileInput.files[0];
-        const srtContent = await file.text();
-        const parsedEntries = parseSRT(srtContent);
-        const totalEntries = parsedEntries.length;
-        let chunks = splitIntoChunks(parsedEntries, chunkCount);
-        const translatedEntries = [];
-        const failedChunks = [];
+            // Reset UI
+            progressContainer.style.display = 'none';
+            downloadLink.style.display = 'none';
+            errorMessage.style.display = 'none';
+            submitButton.disabled = true;
 
-        progressContainer.style.display = 'block';
+            try {
+                const parsedEntries = parseSRT(srtContent);
+                const totalEntries = parsedEntries.length;
+                let chunks = splitIntoChunks(parsedEntries, chunkCount);
+                const translatedEntries = [];
+                const failedChunks = [];
 
-        for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
-            let chunk = chunks[chunkIndex];
-            progressText.textContent = \`Processing chunk \${ chunkIndex + 1 } of \${ chunks.length } (\${ Math.round(chunkIndex / chunks.length * 100) }% complete)\`;
-            let retryCount = 0;
-            const maxRetries = 2; // Increased to 2 retries for mismatch error
+                progressContainer.style.display = 'block';
 
-            while (retryCount <= maxRetries) {
-                try {
-                    console.log(\`Translating chunk \${ chunkIndex + 1 } with \${ chunk.length } entries(Attempt \${ retryCount + 1})\`);
-                    const translatedLines = await translateChunk(chunk, apiKey, baseDelay, quotaDelay, lang, chunkIndex + 1);
-                    
-                    // Map translated lines back to entries
-                    chunk.forEach((entry, index) => {
-                        translatedEntries.push({
-                            id: entry.id,
-                            timeStamp: entry.timeStamp,
-                            text: translatedLines[index].trim()
-                        });
-                    });
-                    console.log(\`Successfully translated chunk \${ chunkIndex + 1 } \`);
-                    break; // Exit retry loop on success
-                } catch (error) {
-                    console.error(\`Error on chunk \${ chunkIndex + 1 }: \${ error.message } \`);
+                // Rest of the translation logic remains the same
+                for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+                    let chunk = chunks[chunkIndex];
+                    progressText.textContent = \`Processing chunk \${chunkIndex + 1} of \${chunks.length} (\${Math.round(chunkIndex / chunks.length * 100)}% complete)\`;
+                    let retryCount = 0;
+                    const maxRetries = 2;
+
+                    while (retryCount <= maxRetries) {
+                        try {
+                            console.log(\`Translating chunk \${chunkIndex + 1} with \${chunk.length} entries (Attempt \${retryCount + 1})\`);
+                            const translatedLines = await translateChunk(chunk, apiKey, baseDelay, quotaDelay, lang, chunkIndex + 1);
+                            
+                            chunk.forEach((entry, index) => {
+                                translatedEntries.push({
+                                    id: entry.id,
+                                    timeStamp: entry.timeStamp,
+                                    text: translatedLines[index].trim()
+                                });
+                            });
+                            console.log(\`Successfully translated chunk \${chunkIndex + 1}\`);
+                            break;
+                        } catch (error) {
+                            console.error(\`Error on chunk \${ chunkIndex + 1 }: \${ error.message } \`);
                     if (error.message.includes('Quota exceeded. Waiting')) {
                         const waitTime = quotaDelay / 1000;
                         let remainingTime = waitTime;
@@ -575,36 +630,36 @@ function htmlForm() {
                 }
             }
 
-            const totalProgress = Math.round(((chunkIndex + 1) / chunks.length) * 100);
-            progressBar.style.width = \`\${ totalProgress }% \`;
-            progressText.textContent = \`Processed chunk \${ chunkIndex + 1 } of \${ chunks.length } (\${ totalProgress }% complete)\`;
+                    const totalProgress = Math.round(((chunkIndex + 1) / chunks.length) * 100);
+                    progressBar.style.width = \`\${totalProgress}%\`;
+                    progressText.textContent = \`Processed chunk \${chunkIndex + 1} of \${chunks.length} (\${totalProgress}% complete)\`;
+                }
+
+                const translatedSRT = reconstructSRT(translatedEntries);
+                const blob = new Blob([translatedSRT], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                downloadLink.innerHTML = \`<a href="\${url}" download="\${fileName}-\${lang}.srt">Download Translated SRT (\${translatedEntries.length} entries, \${chunks.length - failedChunks.length} of \${chunks.length} chunks translated)</a>\`;
+                downloadLink.style.display = 'block';
+
+                if (failedChunks.length > 0) {
+                    errorMessage.textContent = \`Translated \${chunks.length - failedChunks.length} of \${chunks.length} chunks. Failed: \${failedChunks.map(c => \`Chunk \${c.chunk} - \${c.reason}\`).join(', ')}\`;
+                    errorMessage.style.display = 'block';
+                } else {
+                    errorMessage.textContent = 'All chunks translated successfully!';
+                    errorMessage.style.color = '#44ff44';
+                    errorMessage.style.display = 'block';
+                }
+
+                saveApiKey();
+            } catch (error) {
+                errorMessage.textContent = \`Unexpected error: \${error.message}\`;
+                errorMessage.style.display = 'block';
+            } finally {
+                submitButton.disabled = false;
+            }
+
+            return false;
         }
-
-        const translatedSRT = reconstructSRT(translatedEntries);
-        const blob = new Blob([translatedSRT], { type: 'application/octet-stream' });
-        const url = URL.createObjectURL(blob);
-        downloadLink.innerHTML = \`<a href="\${url}" download="translated.srt"> Download Translated SRT(\${ translatedEntries.length } entries, \${ chunks.length - failedChunks.length } of \${ chunks.length } chunks translated)</a>\`;
-        downloadLink.style.display = 'block';
-
-        if (failedChunks.length > 0) {
-            errorMessage.textContent = \`Translated \${ chunks.length - failedChunks.length } of \${ chunks.length } chunks.Failed: \${ failedChunks.map(c => \`Chunk \${c.chunk} - \${c.reason}\`).join(', ') } \`;
-            errorMessage.style.display = 'block';
-        } else {
-            errorMessage.textContent = 'All chunks translated successfully!';
-            errorMessage.style.color = '#44ff44'; // Green for success
-            errorMessage.style.display = 'block';
-        }
-
-        saveApiKey();
-    } catch (error) {
-        errorMessage.textContent = \`Unexpected error: \${ error.message }\`;
-        errorMessage.style.display = 'block';
-    } finally {
-        submitButton.disabled = false;
-    }
-
-    return false;
-}
     </script>
 </body>
 </html>
