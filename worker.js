@@ -257,6 +257,34 @@ function htmlForm() {
                 padding: 1.5rem;
             }
         }
+
+select {
+    padding: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    font-size: 1rem;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    color: #e0e0e0;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    transition: border-color 0.3s ease, background 0.3s ease;
+}
+
+select:focus {
+    border-color: #007bff;
+    background: rgba(255, 255, 255, 0.15);
+    outline: none;
+}
+
+select {
+    background-image: url('data:image/svg+xml;utf8,<svg fill="%23e0e0e0" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+}
     </style>
 </head>
 <body>
@@ -288,11 +316,20 @@ function htmlForm() {
                     <i class="fas fa-eye"></i>
                 </button>
             </div>
-            <!-- Rest of the form remains the same -->
+
             <div class="remember-me">
                 <input type="checkbox" id="remember_me" name="remember_me">
                 <label for="remember_me">Remember my API key</label>
             </div>
+
+            <label for="model">Gemini Model:</label>
+            <select id="model" name="model">
+                <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash</option>
+                <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+            </select>
             <label for="base_delay">Base Delay (ms):</label>
             <input type="number" id="base_delay" name="base_delay" min="100" value="4000" placeholder="Base delay in milliseconds" required>
             <label for="quota_delay">Quota Delay (ms):</label>
@@ -383,8 +420,8 @@ function htmlForm() {
             return chunks;
         }
 
-        async function translateChunk(chunk, apiKey, baseDelay, quotaDelay, lang, chunkIndex) {
-            const url = \`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=\${apiKey}\`;
+        async function translateChunk(chunk, apiKey, baseDelay, quotaDelay, lang, chunkIndex, model) {
+            const url = \`https://generativelanguage.googleapis.com/v1beta/models/\${model}:generateContent?key=\${apiKey}\`;
             const headers = { 'Content-Type': 'application/json' };
             const combinedText = chunk.map(entry => entry.text).join('\\n---\\n');
             console.log(\`Chunk \${chunkIndex} input (length: \${combinedText.length}): \${combinedText}\`);
@@ -503,6 +540,7 @@ function htmlForm() {
             const downloadLink = document.getElementById('download-link');
             const errorMessage = document.getElementById('error-message');
             const submitButton = document.querySelector('button[type="submit"]');
+            const model = document.getElementById('model').value; 
 
             // Validate inputs
             if (isNaN(baseDelay) || baseDelay < 100) {
@@ -566,7 +604,8 @@ function htmlForm() {
                     while (retryCount <= maxRetries) {
                         try {
                             console.log(\`Translating chunk \${chunkIndex + 1} with \${chunk.length} entries (Attempt \${retryCount + 1})\`);
-                            const translatedLines = await translateChunk(chunk, apiKey, baseDelay, quotaDelay, lang, chunkIndex + 1);
+                            const translatedLines = await translateChunk(chunk, apiKey, baseDelay, quotaDelay, lang, chunkIndex + 1, model);
+            
                             
                             chunk.forEach((entry, index) => {
                                 translatedEntries.push({
