@@ -521,7 +521,7 @@ select {
                 <div class="advanced-warning">
                     <p>⚠️ Warning: These settings are for advanced users only. Incorrect values may cause translation failures or API quota issues. Proceed with caution.</p>
                     <label class="acknowledge-label">
-                        <input type="checkbox" id="acknowledge" name="acknowledge" required>
+                        <input type="checkbox" id="acknowledge" name="acknowledge">
                         I understand the risks and know what I'm doing
                     </label>
                 </div>
