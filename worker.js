@@ -474,6 +474,7 @@ select {
         </div>
         <div class="container">
         <h1>SRT Translator to Any Language</h1>
+        <p style="color: #ff4444; font-weight: bold;">⚠️ Please use a VPN to access the Gemini API, as Iran is currently under sanctions.</p>
         <p>Upload an SRT file or paste SRT content and provide your Gemini API key to translate the text to any language.</p>
         <form id="translate-form" onsubmit="return handleTranslate(event)">
             <label>Input Method:</label>
@@ -520,7 +521,7 @@ select {
                 <div class="advanced-warning">
                     <p>⚠️ Warning: These settings are for advanced users only. Incorrect values may cause translation failures or API quota issues. Proceed with caution.</p>
                     <label class="acknowledge-label">
-                        <input type="checkbox" id="acknowledge" name="acknowledge">
+                        <input type="checkbox" id="acknowledge" name="acknowledge" required>
                         I understand the risks and know what I'm doing
                     </label>
                 </div>
@@ -791,67 +792,65 @@ function parseSRT(srtContent) {
                 console.log(\`Chunk \${chunkIndex} retrieved from Translation Memory\`);
                 return cachedTranslations;
             }
-        
-            // Use your Cloudflare Worker URL here
-            const workerUrl = 'https://middleman.yebekhe.workers.dev/';
+
+            const url = \`https://generativelanguage.googleapis.com/v1beta/models/\${model}:generateContent?key=\${apiKey}\`;
             const headers = { 'Content-Type': 'application/json' };
             const combinedText = chunk.map(entry => entry.text).join('\\n---\\n');
             console.log(\`Chunk \${chunkIndex} input (length: \${combinedText.length}): \${combinedText}\`);
             const translationPrompt = document.getElementById('translation_prompt').value.trim();
             const promptPrefix = translationPrompt
                 ? \`Translate the following text to \${lang}.\\n\\n\${translationPrompt}\`
-                : \`Translate the following text to \${lang}.\\n\\nTranslate the following subtitle text into the target language while maintaining:\\n\\n1. Natural, conversational tone\n2. Proper grammar and sentence structure\\n3. Contextual accuracy\\n4. Consistent terminology\\n5. Appropriate length for on-screen display\\n\\nAvoid:\\n\\n1. Literal translations\\n2. Overly formal or bookish language\\n3. Unnatural phrasing\`;
-        
+                : \`Translate the following text to \${lang}.\\n\\nTranslate the following subtitle text into the target language while maintaining:\\n\\n1. Natural, conversational tone\\n2. Proper grammar and sentence structure\\n3. Contextual accuracy\\n4. Consistent terminology\\n5. Appropriate length for on-screen display\\n\\nAvoid:\\n\\n1. Literal translations\\n2. Overly formal or bookish language\\n3. Unnatural phrasing\`;
+
             const payload = {
-                endpoint: \`https://generativelanguage.googleapis.com/v1beta/models/\${model}:generateContent?key=\${apiKey}\`,
                 contents: [{
                     parts: [{
                         text: \`\${promptPrefix} Return only the translated text, maintaining the same number of lines separated by "---", nothing else:\\n\\n\${combinedText}\`
                     }]
                 }]
             };
-        
+
             let attempts = 0;
             const maxAttempts = 5;
-        
+
             while (attempts < maxAttempts) {
                 try {
-                    const response = await fetch(workerUrl, {
+                    const response = await fetch(url, {
                         method: 'POST',
                         headers,
                         body: JSON.stringify(payload)
                     });
-        
+
                     if (!response.ok) {
                         if (response.status === 503) {
                             throw new Error('Service unavailable (503) - Retrying...');
                         } else if (response.status === 429) {
                             throw new Error('Quota exceeded (429) - Retrying...');
                         }
-                        throw new Error(\`Worker error: \${response.status} - \${response.statusText}\`);
+                        throw new Error(\`Gemini API error: \${response.status} - \${response.statusText}\`);
                     }
-        
+
                     const data = await response.json();
                     if (!data.candidates || !data.candidates[0].content || !data.candidates[0].content.parts[0].text) {
-                        throw new Error('Invalid response from API through Worker - Ensure your API key is valid');
+                        // Store translations in memory when successful
+                        const translatedText = data.candidates[0].content.parts[0].text.trim();
+                        const translatedLines = translatedText.split('---');
+                        chunk.forEach((entry, idx) => {
+                            if (translatedLines[idx]) {
+                                updateTranslationMemory(entry.text, translatedLines[idx].trim(), lang);
+                            }
+                        });
+
+                        throw new Error('Invalid response from Gemini API - Ensure your API key is valid');
                     }
-        
+
                     await new Promise(resolve => setTimeout(resolve, baseDelay));
                     const translatedText = data.candidates[0].content.parts[0].text.trim();
                     console.log(\`Chunk \${chunkIndex} response: \${translatedText}\`);
-                    
-                    // Store translations in memory when successful
                     const translatedLines = translatedText.split('---');
-                    chunk.forEach((entry, idx) => {
-                        if (translatedLines[idx]) {
-                            updateTranslationMemory(entry.text, translatedLines[idx].trim(), lang);
-                        }
-                    });
-        
                     if (translatedLines.length !== chunk.length) {
                         throw new Error(\`Translation response does not match chunk entry count (expected \${chunk.length}, got \${translatedLines.length})\`);
                     }
-                    
                     return translatedLines;
                 } catch (error) {
                     attempts++;
