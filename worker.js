@@ -154,6 +154,17 @@ function htmlForm() {
             color: var(--text-color-light);
         }
 
+        .light-theme .remove-file {
+            color: var(--text-color-light);
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            border-radius: 4px;
+        }
+
+        .light-theme .remove-file:hover {
+            background: rgba(255, 68, 68, 0.2);
+        }
+
         input[type="file"],
         input[type="text"],
         input[type="password"],
@@ -319,7 +330,7 @@ function htmlForm() {
         .progress {
             height: 100%;
             background: linear-gradient(135deg, #007bff, #0056b3);
-            width: 0;
+            width: 100%;
             transition: width 0.3s ease;
         }
 
@@ -463,7 +474,6 @@ select {
         </div>
         <div class="container">
         <h1>SRT Translator to Any Language</h1>
-        <p style="color: #ff4444; font-weight: bold;">⚠️ Please use a VPN to access the Gemini API, as Iran is currently under sanctions.</p>
         <p>Upload an SRT file or paste SRT content and provide your Gemini API key to translate the text to any language.</p>
         <form id="translate-form" onsubmit="return handleTranslate(event)">
             <label>Input Method:</label>
@@ -510,7 +520,7 @@ select {
                 <div class="advanced-warning">
                     <p>⚠️ Warning: These settings are for advanced users only. Incorrect values may cause translation failures or API quota issues. Proceed with caution.</p>
                     <label class="acknowledge-label">
-                        <input type="checkbox" id="acknowledge" name="acknowledge" required>
+                        <input type="checkbox" id="acknowledge" name="acknowledge">
                         I understand the risks and know what I'm doing
                     </label>
                 </div>
@@ -518,6 +528,7 @@ select {
                 <label for="model">Gemini Model:</label>
                 <select id="model" name="model">
                     <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash</option>
+                    <option value="gemma-3-27b-it">Gemma3 27B</option>
                     <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
                     <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
                     <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B</option>
@@ -530,7 +541,17 @@ select {
                 <label for="chunk_count">Number of Chunks:</label>
                 <input type="number" id="chunk_count" name="chunk_count" min="1" value="20" placeholder="Number of chunks" required>
                 <label for="translation_prompt">Translation Instructions:</label>
-                <textarea id="translation_prompt" name="translation_prompt" rows="3" placeholder="Enter custom translation instructions (e.g., 'Keep technical terms in English')" style="width: 100%; padding: 0.75rem; border-radius: 8px; background: rgba(255, 255, 255, 0.1); color: #e0e0e0; border: 1px solid rgba(255, 255, 255, 0.2); resize: vertical;">Maintain a formal tone</textarea>
+<textarea id="translation_prompt" name="translation_prompt" rows="4" style="width: 100%; padding: 0.75rem; border-radius: 8px; background: rgba(255, 255, 255, 0.1); color: #e0e0e0; border: 1px solid rgba(255, 255, 255, 0.2); resize: vertical;">Translate the following subtitle text into the target language while maintaining:
+1. Natural, conversational tone
+2. Proper grammar and sentence structure
+3. Contextual accuracy
+4. Consistent terminology
+5. Appropriate length for on-screen display
+Avoid:
+1. Literal translations
+2. Overly formal or bookish language
+3. Unnatural phrasing
+4. Excessive wordiness</textarea>
             </details>
 
             <label for="lang">Language:</label>
@@ -650,33 +671,7 @@ select {
         window.addEventListener('load', () => {
             loadApiKey();
             setupDragAndDrop();
-            setupAdvancedSettings();
         });
-
-        function setupAdvancedSettings() {
-            const acknowledgeCheckbox = document.getElementById('acknowledge');
-            const advancedInputs = document.querySelectorAll('.advanced-settings input:not(#acknowledge), .advanced-settings select, .advanced-settings textarea');
-            
-            function updateAdvancedFields() {
-                advancedInputs.forEach(input => {
-                    input.disabled = !acknowledgeCheckbox.checked;
-                    if (!acknowledgeCheckbox.checked) {
-                        if (input.type === 'number') {
-                            input.value = input.id === 'base_delay' ? '4000' :
-                                         input.id === 'quota_delay' ? '60000' :
-                                         input.id === 'chunk_count' ? '20' : input.value;
-                        } else if (input.id === 'model') {
-                            input.value = 'gemini-2.0-flash';
-                        } else if (input.id === 'translation_prompt') {
-                            input.value = 'Maintain a formal tone';
-                        }
-                    }
-                });
-            }
-            
-            acknowledgeCheckbox.addEventListener('change', updateAdvancedFields);
-            updateAdvancedFields();
-        }
 
         function setupDragAndDrop() {
             const dropZone = document.getElementById('dropZone');
@@ -777,12 +772,6 @@ function parseSRT(srtContent) {
         }
 
         async function translateChunk(chunk, apiKey, baseDelay, quotaDelay, lang, chunkIndex, model) {
-            // Set default values if advanced settings are not acknowledged
-            const isAdvancedEnabled = document.getElementById('acknowledge').checked;
-            baseDelay = isAdvancedEnabled ? baseDelay : 4000;
-            quotaDelay = isAdvancedEnabled ? quotaDelay : 60000;
-            model = isAdvancedEnabled ? model : 'gemini-2.0-flash';
-
             // Check Translation Memory first
             const cachedTranslations = [];
             let needsTranslation = false;
@@ -802,67 +791,67 @@ function parseSRT(srtContent) {
                 console.log(\`Chunk \${chunkIndex} retrieved from Translation Memory\`);
                 return cachedTranslations;
             }
-
-            const url = \`https://generativelanguage.googleapis.com/v1beta/models/\${model}:generateContent?key=\${apiKey}\`;
+        
+            // Use your Cloudflare Worker URL here
+            const workerUrl = 'https://middleman.yebekhe.workers.dev/';
             const headers = { 'Content-Type': 'application/json' };
             const combinedText = chunk.map(entry => entry.text).join('\\n---\\n');
             console.log(\`Chunk \${chunkIndex} input (length: \${combinedText.length}): \${combinedText}\`);
-            const translationPrompt = document.getElementById('acknowledge').checked
-                ? document.getElementById('translation_prompt').value.trim()
-                : 'Maintain a formal tone';
+            const translationPrompt = document.getElementById('translation_prompt').value.trim();
             const promptPrefix = translationPrompt
                 ? \`Translate the following text to \${lang}.\\n\\n\${translationPrompt}\`
-                : \`Translate the following text to \${lang}.\`;
-
+                : \`Translate the following text to \${lang}.\\n\\nTranslate the following subtitle text into the target language while maintaining:\\n\\n1. Natural, conversational tone\n2. Proper grammar and sentence structure\\n3. Contextual accuracy\\n4. Consistent terminology\\n5. Appropriate length for on-screen display\\n\\nAvoid:\\n\\n1. Literal translations\\n2. Overly formal or bookish language\\n3. Unnatural phrasing\`;
+        
             const payload = {
+                endpoint: \`https://generativelanguage.googleapis.com/v1beta/models/\${model}:generateContent?key=\${apiKey}\`,
                 contents: [{
                     parts: [{
                         text: \`\${promptPrefix} Return only the translated text, maintaining the same number of lines separated by "---", nothing else:\\n\\n\${combinedText}\`
                     }]
                 }]
             };
-
+        
             let attempts = 0;
             const maxAttempts = 5;
-
+        
             while (attempts < maxAttempts) {
                 try {
-                    const response = await fetch(url, {
+                    const response = await fetch(workerUrl, {
                         method: 'POST',
                         headers,
                         body: JSON.stringify(payload)
                     });
-
+        
                     if (!response.ok) {
                         if (response.status === 503) {
                             throw new Error('Service unavailable (503) - Retrying...');
                         } else if (response.status === 429) {
                             throw new Error('Quota exceeded (429) - Retrying...');
                         }
-                        throw new Error(\`Gemini API error: \${response.status} - \${response.statusText}\`);
+                        throw new Error(\`Worker error: \${response.status} - \${response.statusText}\`);
                     }
-
+        
                     const data = await response.json();
                     if (!data.candidates || !data.candidates[0].content || !data.candidates[0].content.parts[0].text) {
-                        // Store translations in memory when successful
-                        const translatedText = data.candidates[0].content.parts[0].text.trim();
-                        const translatedLines = translatedText.split('---');
-                        chunk.forEach((entry, idx) => {
-                            if (translatedLines[idx]) {
-                                updateTranslationMemory(entry.text, translatedLines[idx].trim(), lang);
-                            }
-                        });
-
-                        throw new Error('Invalid response from Gemini API - Ensure your API key is valid');
+                        throw new Error('Invalid response from API through Worker - Ensure your API key is valid');
                     }
-
+        
                     await new Promise(resolve => setTimeout(resolve, baseDelay));
                     const translatedText = data.candidates[0].content.parts[0].text.trim();
                     console.log(\`Chunk \${chunkIndex} response: \${translatedText}\`);
+                    
+                    // Store translations in memory when successful
                     const translatedLines = translatedText.split('---');
+                    chunk.forEach((entry, idx) => {
+                        if (translatedLines[idx]) {
+                            updateTranslationMemory(entry.text, translatedLines[idx].trim(), lang);
+                        }
+                    });
+        
                     if (translatedLines.length !== chunk.length) {
                         throw new Error(\`Translation response does not match chunk entry count (expected \${chunk.length}, got \${translatedLines.length})\`);
                     }
+                    
                     return translatedLines;
                 } catch (error) {
                     attempts++;
@@ -929,17 +918,16 @@ function parseSRT(srtContent) {
             const srtText = document.getElementById('srt_text');
             const apiKey = document.getElementById('api_key').value;
             const lang = document.getElementById('lang').value;
-            const isAdvancedEnabled = document.getElementById('acknowledge').checked;
-            const baseDelay = isAdvancedEnabled ? parseInt(document.getElementById('base_delay').value, 10) : 4000;
-            const quotaDelay = isAdvancedEnabled ? parseInt(document.getElementById('quota_delay').value, 10) : 60000;
-            const chunkCount = isAdvancedEnabled ? parseInt(document.getElementById('chunk_count').value, 10) : 20;
+            const baseDelay = parseInt(document.getElementById('base_delay').value, 10);
+            const quotaDelay = parseInt(document.getElementById('quota_delay').value, 10);
+            const chunkCount = parseInt(document.getElementById('chunk_count').value, 10);
             const progressContainer = document.getElementById('progress-container');
             const progressBar = document.getElementById('progress');
             const progressText = document.getElementById('progress-text');
             const downloadLink = document.getElementById('download-link');
             const errorMessage = document.getElementById('error-message');
             const submitButton = document.querySelector('button[type="submit"]');
-            const model = isAdvancedEnabled ? document.getElementById('model').value : 'gemini-2.0-flash'; 
+            const model = document.getElementById('model').value; 
 
             // Validate inputs
             if (isNaN(baseDelay) || baseDelay < 100) {
@@ -1108,6 +1096,9 @@ function parseSRT(srtContent) {
                     errorMessage.style.display = 'block';
                 } else {
                     errorMessage.textContent = 'All chunks translated successfully!';
+progressText.textContent = 'DONE';
+document.getElementById('chunk-status').textContent = 'SRT translated successfully';
+progressBar.style.width = '100%';
                     errorMessage.style.color = '#44ff44';
                     errorMessage.style.display = 'block';
                 }
