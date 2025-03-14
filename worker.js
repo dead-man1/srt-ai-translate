@@ -37,6 +37,23 @@ function htmlForm() {
     <title>SRT Translator to Any Language (Gemini)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        :root {
+            --bg-gradient-dark: linear-gradient(135deg, #1e1e2f, #2a2a40);
+            --bg-gradient-light: linear-gradient(135deg, #f0f2f5, #e2e6ea);
+            --text-color-dark: #e0e0e0;
+            --text-color-light: #2c3e50;
+            --container-bg-dark: rgba(40, 40, 60, 0.9);
+            --container-bg-light: rgba(255, 255, 255, 0.9);
+            --input-bg-dark: rgba(255, 255, 255, 0.1);
+            --input-bg-light: rgba(0, 0, 0, 0.05);
+            --border-color-dark: rgba(255, 255, 255, 0.2);
+            --border-color-light: rgba(0, 0, 0, 0.2);
+            --accent-color: #007bff;
+            --accent-hover: #0056b3;
+            --error-color: #ff4444;
+            --success-color: #44ff44;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -45,18 +62,50 @@ function htmlForm() {
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1e1e2f, #2a2a40);
-            color: #e0e0e0;
+            background: var(--bg-gradient-dark);
+            color: var(--text-color-dark);
             line-height: 1.6;
             padding: 20px;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        body.light-theme {
+            background: var(--bg-gradient-light);
+            color: var(--text-color-light);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .theme-toggle button {
+            background: transparent;
+            border: none;
+            color: var(--text-color-dark);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .theme-toggle button:hover {
+            transform: rotate(45deg);
+        }
+
+        .light-theme .theme-toggle button {
+            color: var(--text-color-light);
         }
 
         .container {
-            background: rgba(40, 40, 60, 0.9);
+            background: var(--container-bg-dark);
             padding: 2rem;
             border-radius: 15px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
@@ -70,15 +119,23 @@ function htmlForm() {
         h1 {
             font-size: 2rem;
             margin-bottom: 1.5rem;
-            color: #ffffff;
+            color: var(--text-color-dark);
             text-align: center;
             font-weight: 600;
+        }
+
+        .light-theme h1 {
+            color: var(--text-color-light);
         }
 
         p {
             margin-bottom: 1.5rem;
             text-align: center;
-            color: #cccccc;
+            color: var(--text-color-dark);
+        }
+
+        .light-theme p {
+            color: var(--text-color-light);
         }
 
         form {
@@ -90,7 +147,11 @@ function htmlForm() {
         label {
             font-weight: bold;
             margin-bottom: 0.5rem;
-            color: #ffffff;
+            color: var(--text-color-dark);
+        }
+
+        .light-theme label {
+            color: var(--text-color-light);
         }
 
         input[type="file"],
@@ -103,12 +164,38 @@ function htmlForm() {
             font-size: 1rem;
             width: 100%;
             background: rgba(255, 255, 255, 0.1);
-            color: #e0e0e0;
+            color: var(--text-color-dark);
             transition: border-color 0.3s ease, background 0.3s ease;
         }
 
-        input[type="file"] {
+        .drag-drop-zone {
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
             cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.05);
+            margin-bottom: 1rem;
+        }
+
+        .drag-drop-zone.dragover {
+            border-color: #007bff;
+            background: rgba(0, 123, 255, 0.1);
+        }
+
+        .drag-drop-zone i {
+            font-size: 2rem;
+            color: var(--text-color-dark);
+            margin-bottom: 1rem;
+        }
+
+        .drag-drop-zone p {
+            margin: 0;
+        }
+
+        input[type="file"] {
+            display: none;
         }
 
         input[type="text"]:focus,
@@ -135,7 +222,7 @@ function htmlForm() {
             background: none;
             border: none;
             cursor: pointer;
-            color: #cccccc;
+            color: var(--text-color-dark);
             font-size: 1.2rem;
             transition: color 0.3s ease;
         }
@@ -156,7 +243,7 @@ function htmlForm() {
         }
 
         .remember-me label {
-            color: #cccccc;
+            color: var(--text-color-dark);
         }
 
         button {
@@ -182,6 +269,43 @@ function htmlForm() {
         .progress-container {
             margin-top: 1rem;
             display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .progress-details {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-color-dark);
+        }
+
+        .light-theme .progress-details {
+            color: var(--text-color-light);
+        }
+
+        @media (max-width: 480px) {
+            .progress-details {
+                flex-direction: column;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            input[type="number"],
+            input[type="text"],
+            input[type="password"],
+            select {
+                font-size: 16px;
+            }
         }
 
         .progress-bar {
@@ -202,7 +326,7 @@ function htmlForm() {
         .progress-text {
             text-align: center;
             margin-top: 0.5rem;
-            color: #cccccc;
+            color: var(--text-color-dark);
         }
 
         .download-link {
@@ -279,6 +403,50 @@ select:focus {
     outline: none;
 }
 
+.advanced-settings {
+    margin-top: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.advanced-settings summary {
+    cursor: pointer;
+    padding: 0.5rem;
+    color: #ff4444;
+    font-weight: bold;
+    user-select: none;
+}
+
+.advanced-settings summary:hover {
+    color: #ff6666;
+}
+
+.advanced-warning {
+    background: rgba(255, 68, 68, 0.1);
+    border: 1px solid rgba(255, 68, 68, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.advanced-warning p {
+    color: #ff4444;
+    margin-bottom: 1rem;
+}
+
+.acknowledge-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #ff4444;
+    font-size: 0.9rem;
+}
+
+.acknowledge-label input[type="checkbox"] {
+    margin: 0;
+}
+
 select {
     background-image: url('data:image/svg+xml;utf8,<svg fill="%23e0e0e0" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
     background-repeat: no-repeat;
@@ -288,7 +456,12 @@ select {
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="theme-toggle">
+            <button id="themeToggle" aria-label="Toggle theme">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+        <div class="container">
         <h1>SRT Translator to Any Language</h1>
         <p style="color: #ff4444; font-weight: bold;">⚠️ Please use a VPN to access the Gemini API, as Iran is currently under sanctions.</p>
         <p>Upload an SRT file or paste SRT content and provide your Gemini API key to translate the text to any language.</p>
@@ -300,8 +473,18 @@ select {
             </div>
             
             <div id="file-input" class="input-section">
-                <label for="file">Upload SRT File:</label>
-                <input type="file" id="file" name="file" accept=".srt">
+                <label>Upload SRT File:</label>
+                <div class="drag-drop-zone" id="dropZone">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Drag & drop your SRT file here<br>or click to browse</p>
+                    <input type="file" id="file" name="file" accept=".srt">
+                </div>
+                <div id="file-info" style="display: none; text-align: center; margin-top: 0.5rem;">
+                    <i class="fas fa-file-alt"></i> <span></span>
+                    <button type="button" class="remove-file" style="background: none; padding: 0.25rem; margin-left: 0.5rem;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
             </div>
             
             <div id="text-input" class="input-section" style="display: none;">
@@ -322,20 +505,34 @@ select {
                 <label for="remember_me">Remember my API key</label>
             </div>
 
-            <label for="model">Gemini Model:</label>
-            <select id="model" name="model">
-                <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash</option>
-                <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
-                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B</option>
-                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-            </select>
-            <label for="base_delay">Base Delay (ms):</label>
-            <input type="number" id="base_delay" name="base_delay" min="100" value="4000" placeholder="Base delay in milliseconds" required>
-            <label for="quota_delay">Quota Delay (ms):</label>
-            <input type="number" id="quota_delay" name="quota_delay" min="1000" value="60000" placeholder="Quota delay in milliseconds" required>
-            <label for="chunk_count">Number of Chunks:</label>
-            <input type="number" id="chunk_count" name="chunk_count" min="1" value="20" placeholder="Number of chunks" required>
+            <details class="advanced-settings">
+                <summary>Advanced Settings ⚠️</summary>
+                <div class="advanced-warning">
+                    <p>⚠️ Warning: These settings are for advanced users only. Incorrect values may cause translation failures or API quota issues. Proceed with caution.</p>
+                    <label class="acknowledge-label">
+                        <input type="checkbox" id="acknowledge" name="acknowledge" required>
+                        I understand the risks and know what I'm doing
+                    </label>
+                </div>
+                
+                <label for="model">Gemini Model:</label>
+                <select id="model" name="model">
+                    <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash</option>
+                    <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
+                    <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                    <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B</option>
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                </select>
+                <label for="base_delay">Base Delay (ms):</label>
+                <input type="number" id="base_delay" name="base_delay" min="100" value="4000" placeholder="Base delay in milliseconds" required>
+                <label for="quota_delay">Quota Delay (ms):</label>
+                <input type="number" id="quota_delay" name="quota_delay" min="1000" value="60000" placeholder="Quota delay in milliseconds" required>
+                <label for="chunk_count">Number of Chunks:</label>
+                <input type="number" id="chunk_count" name="chunk_count" min="1" value="20" placeholder="Number of chunks" required>
+                <label for="translation_prompt">Translation Instructions:</label>
+                <textarea id="translation_prompt" name="translation_prompt" rows="3" placeholder="Enter custom translation instructions (e.g., 'Keep technical terms in English')" style="width: 100%; padding: 0.75rem; border-radius: 8px; background: rgba(255, 255, 255, 0.1); color: #e0e0e0; border: 1px solid rgba(255, 255, 255, 0.2); resize: vertical;">Maintain a formal tone</textarea>
+            </details>
+
             <label for="lang">Language:</label>
             <input type="text" id="lang" name="lang" value="Persian (Farsi)" placeholder="Language:">
             <button type="submit">Translate</button>
@@ -345,6 +542,10 @@ select {
                 <div class="progress" id="progress"></div>
             </div>
             <div class="progress-text" id="progress-text">0% Complete</div>
+            <div class="progress-details">
+                <span id="chunk-status">Processing chunk: 0/0</span>
+                <span id="time-estimate">Estimated time: calculating...</span>
+            </div>
         </div>
         <div class="download-link" id="download-link"></div>
         <div class="error-message" id="error-message"></div>
@@ -352,6 +553,66 @@ select {
     </div>
 
     <script>
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = themeToggle.querySelector('i');
+        const savedTheme = localStorage.getItem('theme');
+
+        function updateTheme(isLight) {
+            document.body.classList.toggle('light-theme', isLight);
+            themeIcon.classList.replace(isLight ? 'fa-moon' : 'fa-sun', isLight ? 'fa-sun' : 'fa-moon');
+            
+            // Update container background
+            const container = document.querySelector('.container');
+            container.style.background = isLight ? 'var(--container-bg-light)' : 'var(--container-bg-dark)';
+            
+            // Update text colors
+            const labels = document.querySelectorAll('label:not(.acknowledge-label)');
+            labels.forEach(label => label.style.color = isLight ? 'var(--text-color-light)' : '#ffffff');
+            
+            // Update input backgrounds and colors
+            const inputs = document.querySelectorAll('input[type="text"], input[type="password"], input[type="number"], textarea, select');
+            inputs.forEach(input => {
+                input.style.background = isLight ? 'var(--input-bg-light)' : 'var(--input-bg-dark)';
+                input.style.color = isLight ? 'var(--text-color-light)' : 'var(--text-color-dark)';
+                input.style.borderColor = isLight ? 'var(--border-color-light)' : 'var(--border-color-dark)';
+            });
+            
+            // Update drag-drop zone
+            const dropZone = document.querySelector('.drag-drop-zone');
+            if (dropZone) {
+                dropZone.style.borderColor = isLight ? 'var(--border-color-light)' : 'var(--border-color-dark)';
+                dropZone.style.background = isLight ? 'var(--input-bg-light)' : 'var(--input-bg-dark)';
+            }
+            
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        }
+
+        if (savedTheme === 'light') {
+            updateTheme(true);
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const isLight = !document.body.classList.contains('light-theme');
+            updateTheme(isLight);
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key.toLowerCase()) {
+                    case 'b': // Toggle theme
+                        e.preventDefault();
+                        themeToggle.click();
+                        break;
+                    case 'enter': // Submit form
+                        e.preventDefault();
+                        document.getElementById('translate-form').requestSubmit();
+                        break;
+                }
+            }
+        });
+
         function togglePasswordVisibility() {
             const apiKeyInput = document.getElementById('api_key');
             const toggleButton = document.querySelector('.toggle-password i');
@@ -386,9 +647,104 @@ select {
             }
         }
 
-        window.addEventListener('load', loadApiKey);
+        window.addEventListener('load', () => {
+            loadApiKey();
+            setupDragAndDrop();
+            setupAdvancedSettings();
+        });
 
-        function parseSRT(srtContent) {
+        function setupAdvancedSettings() {
+            const acknowledgeCheckbox = document.getElementById('acknowledge');
+            const advancedInputs = document.querySelectorAll('.advanced-settings input:not(#acknowledge), .advanced-settings select, .advanced-settings textarea');
+            
+            function updateAdvancedFields() {
+                advancedInputs.forEach(input => {
+                    input.disabled = !acknowledgeCheckbox.checked;
+                    if (!acknowledgeCheckbox.checked) {
+                        if (input.type === 'number') {
+                            input.value = input.id === 'base_delay' ? '4000' :
+                                         input.id === 'quota_delay' ? '60000' :
+                                         input.id === 'chunk_count' ? '20' : input.value;
+                        } else if (input.id === 'model') {
+                            input.value = 'gemini-2.0-flash';
+                        } else if (input.id === 'translation_prompt') {
+                            input.value = 'Maintain a formal tone';
+                        }
+                    }
+                });
+            }
+            
+            acknowledgeCheckbox.addEventListener('change', updateAdvancedFields);
+            updateAdvancedFields();
+        }
+
+        function setupDragAndDrop() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('file');
+            const fileInfo = document.getElementById('file-info');
+
+            dropZone.addEventListener('click', () => fileInput.click());
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            ['dragleave', 'dragend'].forEach(event => {
+                dropZone.addEventListener(event, () => {
+                    dropZone.classList.remove('dragover');
+                });
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length) {
+                    fileInput.files = files;
+                    updateFileInfo(files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length) {
+                    updateFileInfo(fileInput.files[0]);
+                }
+            });
+
+            document.querySelector('.remove-file').addEventListener('click', () => {
+                fileInput.value = '';
+                fileInfo.style.display = 'none';
+                dropZone.style.display = 'block';
+            });
+        }
+
+        function updateFileInfo(file) {
+            const fileInfo = document.getElementById('file-info');
+            const dropZone = document.getElementById('dropZone');
+            const fileNameSpan = fileInfo.querySelector('span');
+            
+            fileNameSpan.textContent = file.name;
+            fileInfo.style.display = 'block';
+            dropZone.style.display = 'none';
+        }
+
+        // Translation Memory store
+let translationMemory = JSON.parse(localStorage.getItem('translationMemory') || '{}');
+
+function updateTranslationMemory(sourceText, translatedText, lang) {
+    if (!translationMemory[lang]) {
+        translationMemory[lang] = {};
+    }
+    translationMemory[lang][sourceText] = translatedText;
+    localStorage.setItem('translationMemory', JSON.stringify(translationMemory));
+}
+
+function findInTranslationMemory(text, lang) {
+    return translationMemory[lang]?.[text];
+}
+
+function parseSRT(srtContent) {
             const entries = srtContent.replace(/\\n+$/, '').split('\\n\\n');
             const parsedEntries = [];
             for (const entry of entries) {
@@ -421,14 +777,47 @@ select {
         }
 
         async function translateChunk(chunk, apiKey, baseDelay, quotaDelay, lang, chunkIndex, model) {
+            // Set default values if advanced settings are not acknowledged
+            const isAdvancedEnabled = document.getElementById('acknowledge').checked;
+            baseDelay = isAdvancedEnabled ? baseDelay : 4000;
+            quotaDelay = isAdvancedEnabled ? quotaDelay : 60000;
+            model = isAdvancedEnabled ? model : 'gemini-2.0-flash';
+
+            // Check Translation Memory first
+            const cachedTranslations = [];
+            let needsTranslation = false;
+            
+            for (const entry of chunk) {
+                const cached = findInTranslationMemory(entry.text, lang);
+                if (cached) {
+                    cachedTranslations.push(cached);
+                } else {
+                    needsTranslation = true;
+                    break;
+                }
+            }
+            
+            // If all translations were found in memory, return them
+            if (!needsTranslation) {
+                console.log(\`Chunk \${chunkIndex} retrieved from Translation Memory\`);
+                return cachedTranslations;
+            }
+
             const url = \`https://generativelanguage.googleapis.com/v1beta/models/\${model}:generateContent?key=\${apiKey}\`;
             const headers = { 'Content-Type': 'application/json' };
             const combinedText = chunk.map(entry => entry.text).join('\\n---\\n');
             console.log(\`Chunk \${chunkIndex} input (length: \${combinedText.length}): \${combinedText}\`);
+            const translationPrompt = document.getElementById('acknowledge').checked
+                ? document.getElementById('translation_prompt').value.trim()
+                : 'Maintain a formal tone';
+            const promptPrefix = translationPrompt
+                ? \`Translate the following text to \${lang}.\\n\\n\${translationPrompt}\`
+                : \`Translate the following text to \${lang}.\`;
+
             const payload = {
                 contents: [{
                     parts: [{
-                        text: \`Translate the following text to \${lang}. Return only the translated text, maintaining the same number of lines separated by "---", nothing else:\\n\\n\${combinedText}\`
+                        text: \`\${promptPrefix} Return only the translated text, maintaining the same number of lines separated by "---", nothing else:\\n\\n\${combinedText}\`
                     }]
                 }]
             };
@@ -455,6 +844,15 @@ select {
 
                     const data = await response.json();
                     if (!data.candidates || !data.candidates[0].content || !data.candidates[0].content.parts[0].text) {
+                        // Store translations in memory when successful
+                        const translatedText = data.candidates[0].content.parts[0].text.trim();
+                        const translatedLines = translatedText.split('---');
+                        chunk.forEach((entry, idx) => {
+                            if (translatedLines[idx]) {
+                                updateTranslationMemory(entry.text, translatedLines[idx].trim(), lang);
+                            }
+                        });
+
                         throw new Error('Invalid response from Gemini API - Ensure your API key is valid');
                     }
 
@@ -531,16 +929,17 @@ select {
             const srtText = document.getElementById('srt_text');
             const apiKey = document.getElementById('api_key').value;
             const lang = document.getElementById('lang').value;
-            const baseDelay = parseInt(document.getElementById('base_delay').value, 10);
-            const quotaDelay = parseInt(document.getElementById('quota_delay').value, 10);
-            const chunkCount = parseInt(document.getElementById('chunk_count').value, 10);
+            const isAdvancedEnabled = document.getElementById('acknowledge').checked;
+            const baseDelay = isAdvancedEnabled ? parseInt(document.getElementById('base_delay').value, 10) : 4000;
+            const quotaDelay = isAdvancedEnabled ? parseInt(document.getElementById('quota_delay').value, 10) : 60000;
+            const chunkCount = isAdvancedEnabled ? parseInt(document.getElementById('chunk_count').value, 10) : 20;
             const progressContainer = document.getElementById('progress-container');
             const progressBar = document.getElementById('progress');
             const progressText = document.getElementById('progress-text');
             const downloadLink = document.getElementById('download-link');
             const errorMessage = document.getElementById('error-message');
             const submitButton = document.querySelector('button[type="submit"]');
-            const model = document.getElementById('model').value; 
+            const model = isAdvancedEnabled ? document.getElementById('model').value : 'gemini-2.0-flash'; 
 
             // Validate inputs
             if (isNaN(baseDelay) || baseDelay < 100) {
@@ -598,15 +997,41 @@ select {
                 for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
                     let chunk = chunks[chunkIndex];
                     progressText.textContent = \`Processing chunk \${chunkIndex + 1} of \${chunks.length} (\${Math.round(chunkIndex / chunks.length * 100)}% complete)\`;
+                    const startTime = performance.now();
                     let retryCount = 0;
                     const maxRetries = 2;
-
+                    
+                    const totalProgress = Math.round((chunkIndex / chunks.length) * 100);
+                    progressBar.style.width = \`\${totalProgress}%\`;
+                    progressText.textContent = \`\${totalProgress}% Complete\`;
+                    document.getElementById('chunk-status').textContent = \`Processing chunk: \${chunkIndex + 1}/\${chunks.length}\`;
+                    
+                    let remainingTime;
+                    if (chunkIndex === 0) {
+                        // First chunk - wait until it's done to calculate baseline
+                        remainingTime = 0;
+                        document.getElementById('time-estimate').textContent = 'Estimated time: calculating...';
+                    } else {
+                        // Use actual time from first chunk as baseline
+                        const elapsedTime = (performance.now() - startTime) / 1000;
+                        remainingTime = window.firstChunkTime * (chunks.length - (chunkIndex + 1));
+                        const minutes = Math.floor(Math.max(0, remainingTime) / 60);
+                        const seconds = Math.floor(Math.max(0, remainingTime) % 60);
+                        const timeText = minutes > 0 ? 
+                            \`\${minutes}m \${seconds}s remaining\` : 
+                            \`\${seconds}s remaining\`;
+                        document.getElementById('time-estimate').textContent = \`Estimated time: \${timeText}\`;
+                    }
+                    
                     while (retryCount <= maxRetries) {
                         try {
                             console.log(\`Translating chunk \${chunkIndex + 1} with \${chunk.length} entries (Attempt \${retryCount + 1})\`);
                             const translatedLines = await translateChunk(chunk, apiKey, baseDelay, quotaDelay, lang, chunkIndex + 1, model);
-            
                             
+                            // After first chunk completes, store its time as baseline
+                            if (chunkIndex === 0) {
+                                window.firstChunkTime = (performance.now() - startTime) / 1000;
+                            }
                             chunk.forEach((entry, index) => {
                                 translatedEntries.push({
                                     id: entry.id,
@@ -667,9 +1092,9 @@ select {
                 }
             }
 
-                    const totalProgress = Math.round(((chunkIndex + 1) / chunks.length) * 100);
-                    progressBar.style.width = \`\${totalProgress}%\`;
-                    progressText.textContent = \`Processed chunk \${chunkIndex + 1} of \${chunks.length} (\${totalProgress}% complete)\`;
+                    //totalProgress = Math.round(((chunkIndex + 1) / chunks.length) * 100);
+                    //progressBar.style.width = \`\${totalProgress}%\`;
+                    //progressText.textContent = \`Processed chunk \${chunkIndex + 1} of \${chunks.length} (\${totalProgress}% complete)\`;
                 }
 
                 const translatedSRT = reconstructSRT(translatedEntries);
