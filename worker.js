@@ -5,20 +5,8 @@ addEventListener('fetch', event => {
 // Main request handler
 async function handleRequest(request) {
     try {
-        const ip = request.headers.get('cf-connecting-ip');
-        console.log('User IP:', ip);
-
-        async function checkIfInIran(ip) {
-            const response = await fetch(`https://ipapi.co/${ip}/json/`);
-            const data = await response.json();
-            return data.country === 'IR';
-        }
-
-        const isInIran = await checkIfInIran(ip);
-        const showWarning = isInIran ? true : false;
-
         if (request.method === 'GET') {
-            return new Response(htmlForm(showWarning), {
+            return new Response(htmlForm(), {
                 headers: { 
                     'Content-Type': 'text/html',
                     'Cache-Control': 'no-store' 
@@ -39,7 +27,7 @@ async function handleRequest(request) {
 }
 
 // HTML form with translation UI, progress bar, and chunk setting
-function htmlForm(showWarning) {
+function htmlForm() {
     return `
     <!DOCTYPE html>
 <html lang="en">
@@ -522,7 +510,7 @@ select {
                 <button id="themeToggle" aria-label="Toggle theme"><i class="fas fa-moon"></i></button>
                 <button id="languageToggle" aria-label="Toggle language"><i class="fas fa-language"></i></button>
             </div>
-            <p id="warning-message" style="color: #ff4444; font-weight: bold; display: \${showWarning ? 'block' : 'none'};">⚠️ Please enable Use Proxy checkbox to access the Gemini API if you are in Iran, as Iran is currently under sanctions.</p>
+            <p id="warning-message" style="color: #ff4444; font-weight: bold; display: block;">⚠️ Please enable Use Proxy checkbox to access the Gemini API if you are in Iran, as Iran is currently under sanctions.</p>
             <p id="upload-instructions">Upload an SRT file or paste SRT content and provide your Gemini API key to translate the text to any language.</p>
             <form id="translate-form" onsubmit="return handleTranslate(event)">
                 <label id="input-method-label">Input Method:</label>
