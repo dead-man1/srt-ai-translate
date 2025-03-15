@@ -5,8 +5,20 @@ addEventListener('fetch', event => {
 // Main request handler
 async function handleRequest(request) {
     try {
+        const ip = request.headers.get('cf-connecting-ip');
+        console.log('User IP:', ip);
+
+        async function checkIfInIran(ip) {
+            const response = await fetch(`https://ipapi.co/${ip}/json/`);
+            const data = await response.json();
+            return data.country === 'IR';
+        }
+
+        const isInIran = await checkIfInIran(ip);
+        const showWarning = isInIran ? true : false;
+
         if (request.method === 'GET') {
-            return new Response(htmlForm(), {
+            return new Response(htmlForm(showWarning), {
                 headers: { 
                     'Content-Type': 'text/html',
                     'Cache-Control': 'no-store' 
@@ -27,7 +39,7 @@ async function handleRequest(request) {
 }
 
 // HTML form with translation UI, progress bar, and chunk setting
-function htmlForm() {
+function htmlForm(showWarning) {
     return `
     <!DOCTYPE html>
 <html lang="en">
@@ -76,6 +88,10 @@ function htmlForm() {
         body.light-theme {
             background: var(--bg-gradient-light);
             color: var(--text-color-light);
+        }
+
+        body.rtl {
+            direction: rtl;
         }
 
         .theme-toggle {
@@ -177,6 +193,7 @@ function htmlForm() {
             background: rgba(255, 255, 255, 0.1);
             color: var(--text-color-dark);
             transition: border-color 0.3s ease, background 0.3s ease;
+            direction: ltr;
         }
 
         .drag-drop-zone {
@@ -240,6 +257,36 @@ function htmlForm() {
 
         .toggle-password:hover {
             color: #007bff;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .remember-me input {
+            margin: 0;
+        }
+
+        .remember-me label {
+            color: var(--text-color-dark);
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .remember-me input {
+            margin: 0;
+        }
+
+        .remember-me label {
+            color: var(--text-color-dark);
         }
 
         .remember-me {
@@ -406,6 +453,7 @@ select {
     -moz-appearance: none;
     cursor: pointer;
     transition: border-color 0.3s ease, background 0.3s ease;
+    direction: ltr;
 }
 
 select:focus {
@@ -467,87 +515,87 @@ select {
     </style>
 </head>
 <body>
-    <div class="theme-toggle">
-            <button id="themeToggle" aria-label="Toggle theme">
-                <i class="fas fa-moon"></i>
-            </button>
-        </div>
+    
         <div class="container">
-        <h1>SRT Translator to Any Language</h1>
-        <p style="color: #ff4444; font-weight: bold;">⚠️ Please use a VPN to access the Gemini API, as Iran is currently under sanctions.</p>
-        <p>Upload an SRT file or paste SRT content and provide your Gemini API key to translate the text to any language.</p>
-        <form id="translate-form" onsubmit="return handleTranslate(event)">
-            <label>Input Method:</label>
-            <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-                <label><input type="radio" name="input_method" value="file" checked> Upload File</label>
-                <label><input type="radio" name="input_method" value="text"> Paste Text</label>
+            <div class="top-bar">
+                <h1 id="page-title" class="page-title">SRT Translator to Any Language</h1>
+                <button id="themeToggle" aria-label="Toggle theme"><i class="fas fa-moon"></i></button>
+                <button id="languageToggle" aria-label="Toggle language"><i class="fas fa-language"></i></button>
             </div>
-            
-            <div id="file-input" class="input-section">
-                <label>Upload SRT File:</label>
-                <div class="drag-drop-zone" id="dropZone">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p>Drag & drop your SRT file here<br>or click to browse</p>
-                    <input type="file" id="file" name="file" accept=".srt">
-                </div>
-                <div id="file-info" style="display: none; text-align: center; margin-top: 0.5rem;">
-                    <i class="fas fa-file-alt"></i> <span></span>
-                    <button type="button" class="remove-file" style="background: none; padding: 0.25rem; margin-left: 0.5rem;">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <div id="text-input" class="input-section" style="display: none;">
-                <label for="srt_text">Paste SRT Content:</label>
-                <textarea id="srt_text" name="srt_text" rows="6" placeholder="Paste your SRT content here..." style="width: 100%; padding: 0.75rem; border-radius: 8px; background: rgba(255, 255, 255, 0.1); color: #e0e0e0; border: 1px solid rgba(255, 255, 255, 0.2); resize: vertical;"></textarea>
-            </div>
-
-            <label for="api_key">Gemini API Key:</label>
-            <div class="api-key-container">
-                <input type="password" id="api_key" name="api_key" placeholder="Enter your Gemini API key" required>
-                <button type="button" class="toggle-password" onclick="togglePasswordVisibility()">
-                    <i class="fas fa-eye"></i>
-                </button>
-            </div>
-
-            <div class="remember-me">
-                <input type="checkbox" id="remember_me" name="remember_me">
-                <label for="remember_me">Remember my API key</label>
-            </div>
-
-            <div class="remember-me">
-                <input type="checkbox" id="useProxyCheckbox" name="useProxyCheckbox">
-                <label for="useProxyCheckbox">Use Proxy</label>
-            </div>
-
-            <details class="advanced-settings">
-                <summary>Advanced Settings ⚠️</summary>
-                <div class="advanced-warning">
-                    <p>⚠️ Warning: These settings are for advanced users only. Incorrect values may cause translation failures or API quota issues. Proceed with caution.</p>
-                    <label class="acknowledge-label">
-                        <input type="checkbox" id="acknowledge" name="acknowledge">
-                        I understand the risks and know what I'm doing
-                    </label>
+            <p id="warning-message" style="color: #ff4444; font-weight: bold; display: \${showWarning ? 'block' : 'none'};">⚠️ Please enable Use Proxy checkbox to access the Gemini API if you are in Iran, as Iran is currently under sanctions.</p>
+            <p id="upload-instructions">Upload an SRT file or paste SRT content and provide your Gemini API key to translate the text to any language.</p>
+            <form id="translate-form" onsubmit="return handleTranslate(event)">
+                <label id="input-method-label">Input Method:</label>
+                <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                    <label><input type="radio" name="input_method" value="file" checked> Upload File</label>
+                    <label><input type="radio" name="input_method" value="text"> Paste Text</label>
                 </div>
                 
-                <label for="model">Gemini Model:</label>
-                <select id="model" name="model">
-                    <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash</option>
-                    <option value="gemma-3-27b-it">Gemma3 27B</option>
-                    <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
-                    <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                    <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B</option>
-                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                </select>
-                <label for="base_delay">Base Delay (ms):</label>
-                <input type="number" id="base_delay" name="base_delay" min="100" value="4000" placeholder="Base delay in milliseconds" required>
-                <label for="quota_delay">Quota Delay (ms):</label>
-                <input type="number" id="quota_delay" name="quota_delay" min="1000" value="60000" placeholder="Quota delay in milliseconds" required>
-                <label for="chunk_count">Number of Chunks:</label>
-                <input type="number" id="chunk_count" name="chunk_count" min="1" value="20" placeholder="Number of chunks" required>
-                <label for="translation_prompt">Translation Instructions:</label>
-<textarea id="translation_prompt" name="translation_prompt" rows="4" style="width: 100%; padding: 0.75rem; border-radius: 8px; background: rgba(255, 255, 255, 0.1); color: #e0e0e0; border: 1px solid rgba(255, 255, 255, 0.2); resize: vertical;">Translate the following subtitle text into the target language while maintaining:
+                <div id="file-input" class="input-section">
+                    <label id="file-label">Upload SRT File:</label>
+                    <div class="drag-drop-zone" id="dropZone">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Drag & drop your SRT file here<br>or click to browse</p>
+                        <input type="file" id="file" name="file" accept=".srt">
+                    </div>
+                    <div id="file-info" style="display: none; text-align: center; margin-top: 0.5rem;">
+                        <i class="fas fa-file-alt"></i> <span></span>
+                        <button type="button" class="remove-file" style="background: none; padding: 0.25rem; margin-left: 0.5rem;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="text-input" class="input-section" style="display: none;">
+                    <label id="text-label" for="srt_text">Paste SRT Content:</label>
+                    <textarea id="srt_text" name="srt_text" rows="6" placeholder="Paste your SRT content here..." style="width: 100%; padding: 0.75rem; border-radius: 8px; background: rgba(255, 255, 255, 0.1); color: #e0e0e0; border: 1px solid rgba(255, 255, 255, 0.2); resize: vertical; direction: ltr;"></textarea>
+                </div>
+
+                <label id="api-key-label" for="api_key">Gemini API Key:</label>
+                <div class="api-key-container">
+                    <input type="password" id="api_key" name="api_key" placeholder="Enter your Gemini API key" required>
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility()">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+
+                <div class="remember-me">
+                    <input type="checkbox" id="remember_me" name="remember_me">
+                    <label id="remember-me-label" for="remember_me">Remember my API key</label>
+                </div>
+
+                <div class="remember-me">
+                    <input type="checkbox" id="useProxyCheckbox" name="useProxyCheckbox">
+                    <label id="use-proxy-label" for="useProxyCheckbox">Use Proxy</label>
+                </div>
+
+                <details class="advanced-settings">
+                    <summary id="advanced-settings-summary">Advanced Settings ⚠️</summary>
+                    <div class="advanced-warning">
+                        <p id="advanced-warning-message">⚠️ Warning: These settings are for advanced users only. Incorrect values may cause translation failures or API quota issues. Proceed with caution.</p>
+                        <label class="acknowledge-label">
+                            <input type="checkbox" id="acknowledge" name="acknowledge">
+                            <span id="acknowledge-text">I understand the risks and know what I'm doing</span>
+                        </label>
+                    </div>
+                    
+                    <label id="model-label" for="model">Gemini Model:</label>
+                    <select id="model" name="model">
+                        <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash</option>
+                        <option value="gemma-3-27b-it">Gemma3 27B</option>
+                        <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
+                        <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                        <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B</option>
+                        <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                    </select>
+                    <label id="base-delay-label" for="base_delay">Base Delay (ms):</label>
+                    <input type="number" id="base_delay" name="base_delay" min="100" value="4000" placeholder="Base delay in milliseconds" required>
+                    <label id="quota-delay-label" for="quota_delay">Quota Delay (ms):</label>
+                    <input type="number" id="quota_delay" name="quota_delay" min="1000" value="60000" placeholder="Quota delay in milliseconds" required>
+                    <label id="chunk-count-label" for="chunk_count">Number of Chunks:</label>
+                    <input type="number" id="chunk_count" name="chunk_count" min="1" value="20" placeholder="Number of chunks" required>
+                    <label id="translation-prompt-label" for="translation_prompt">Translation Instructions:</label>
+<textarea id="translation_prompt" name="translation_prompt" rows="4" style="width: 100%; padding: 0.75rem; border-radius: 8px; background: rgba(255, 255, 255, 0.1); color: #e0e0e0; border: 1px solid rgba(255, 255, 255, 0.2); resize: vertical; direction: ltr;">Translate the following subtitle text into the target language while maintaining:
 1. Natural, conversational tone
 2. Proper grammar and sentence structure
 3. Contextual accuracy
@@ -558,192 +606,261 @@ Avoid:
 2. Overly formal or bookish language
 3. Unnatural phrasing
 4. Excessive wordiness</textarea>
-            </details>
+                </details>
 
-            <label for="lang">Language:</label>
-            <input type="text" id="lang" name="lang" value="Persian (Farsi)" placeholder="Language:">
-            <button type="submit">Translate</button>
-        </form>
-        <div class="progress-container" id="progress-container">
-            <div class="progress-bar">
-                <div class="progress" id="progress"></div>
+                <label id="lang-label" for="lang">Language:</label>
+                <input type="text" id="lang-input" name="lang" value="Persian (Farsi)" placeholder="Language:" style="direction: ltr;">
+                <button id="submit-button" type="submit">Translate</button>
+            </form>
+            <div class="progress-container" id="progress-container">
+                <div class="progress-bar">
+                    <div class="progress" id="progress"></div>
+                </div>
+                <div class="progress-text" id="progress-text">0% Complete</div>
+                <div class="progress-details">
+                    <span id="chunk-status">Processing chunk: 0/0</span>
+                    <span id="time-estimate">Estimated time: calculating...</span>
+                </div>
             </div>
-            <div class="progress-text" id="progress-text">0% Complete</div>
-            <div class="progress-details">
-                <span id="chunk-status">Processing chunk: 0/0</span>
-                <span id="time-estimate">Estimated time: calculating...</span>
-            </div>
+            <div class="download-link" id="download-link"></div>
+            <div class="error-message" id="error-message"></div>
+            <p id="api-key-note" class="api-key-note"></p>
         </div>
-        <div class="download-link" id="download-link"></div>
-        <div class="error-message" id="error-message"></div>
-        <p class="api-key-note">Get your API key from <a href="https://aistudio.google.com/" target="_blank">Google AI Studio</a>.</p>
-    </div>
 
-    <script>
-        // Theme toggle functionality
-        const themeToggle = document.getElementById('themeToggle');
-        const themeIcon = themeToggle.querySelector('i');
-        const savedTheme = localStorage.getItem('theme');
+        <script>
+            // Theme toggle functionality
+            const themeToggle = document.getElementById('themeToggle');
+            const themeIcon = themeToggle.querySelector('i');
+            const savedTheme = localStorage.getItem('theme');
 
-        function updateTheme(isLight) {
-            document.body.classList.toggle('light-theme', isLight);
-            themeIcon.classList.replace(isLight ? 'fa-moon' : 'fa-sun', isLight ? 'fa-sun' : 'fa-moon');
-            
-            // Update container background
-            const container = document.querySelector('.container');
-            container.style.background = isLight ? 'var(--container-bg-light)' : 'var(--container-bg-dark)';
-            
-            // Update text colors
-            const labels = document.querySelectorAll('label:not(.acknowledge-label)');
-            labels.forEach(label => label.style.color = isLight ? 'var(--text-color-light)' : '#ffffff');
-            
-            // Update input backgrounds and colors
-            const inputs = document.querySelectorAll('input[type="text"], input[type="password"], input[type="number"], textarea, select');
-            inputs.forEach(input => {
-                input.style.background = isLight ? 'var(--input-bg-light)' : 'var(--input-bg-dark)';
-                input.style.color = isLight ? 'var(--text-color-light)' : 'var(--text-color-dark)';
-                input.style.borderColor = isLight ? 'var(--border-color-light)' : 'var(--border-color-dark)';
-            });
-            
-            // Update drag-drop zone
-            const dropZone = document.querySelector('.drag-drop-zone');
-            if (dropZone) {
-                dropZone.style.borderColor = isLight ? 'var(--border-color-light)' : 'var(--border-color-dark)';
-                dropZone.style.background = isLight ? 'var(--input-bg-light)' : 'var(--input-bg-dark)';
-            }
-            
-            localStorage.setItem('theme', isLight ? 'light' : 'dark');
-        }
-
-        if (savedTheme === 'light') {
-            updateTheme(true);
-        }
-
-        themeToggle.addEventListener('click', () => {
-            const isLight = !document.body.classList.contains('light-theme');
-            updateTheme(isLight);
-        });
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey || e.metaKey) {
-                switch(e.key.toLowerCase()) {
-                    case 'b': // Toggle theme
-                        e.preventDefault();
-                        themeToggle.click();
-                        break;
-                    case 'enter': // Submit form
-                        e.preventDefault();
-                        document.getElementById('translate-form').requestSubmit();
-                        break;
-                }
-            }
-        });
-
-        function togglePasswordVisibility() {
-            const apiKeyInput = document.getElementById('api_key');
-            const toggleButton = document.querySelector('.toggle-password i');
-            if (apiKeyInput.type === 'password') {
-                apiKeyInput.type = 'text';
-                toggleButton.classList.remove('fa-eye');
-                toggleButton.classList.add('fa-eye-slash');
-            } else {
-                apiKeyInput.type = 'password';
-                toggleButton.classList.remove('fa-eye-slash');
-                toggleButton.classList.add('fa-eye');
-            }
-        }
-
-        function saveApiKey() {
-            const apiKeyInput = document.getElementById('api_key');
-            const rememberMeCheckbox = document.getElementById('remember_me');
-            if (rememberMeCheckbox.checked && apiKeyInput.value) {
-                localStorage.setItem('savedApiKey', apiKeyInput.value);
-            } else {
-                localStorage.removeItem('savedApiKey');
-            }
-        }
-
-        function loadApiKey() {
-            const apiKeyInput = document.getElementById('api_key');
-            const rememberMeCheckbox = document.getElementById('remember_me');
-            const savedApiKey = localStorage.getItem('savedApiKey');
-            if (savedApiKey) {
-                apiKeyInput.value = savedApiKey;
-                rememberMeCheckbox.checked = true;
-            }
-        }
-
-        window.addEventListener('load', () => {
-            loadApiKey();
-            setupDragAndDrop();
-        });
-
-        function setupDragAndDrop() {
-            const dropZone = document.getElementById('dropZone');
-            const fileInput = document.getElementById('file');
-            const fileInfo = document.getElementById('file-info');
-
-            dropZone.addEventListener('click', () => fileInput.click());
-
-            dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropZone.classList.add('dragover');
-            });
-
-            ['dragleave', 'dragend'].forEach(event => {
-                dropZone.addEventListener(event, () => {
-                    dropZone.classList.remove('dragover');
+            function updateTheme(isLight) {
+                document.body.classList.toggle('light-theme', isLight);
+                themeIcon.classList.replace(isLight ? 'fa-moon' : 'fa-sun', isLight ? 'fa-sun' : 'fa-moon');
+                
+                // Update container background
+                const container = document.querySelector('.container');
+                container.style.background = isLight ? 'var(--container-bg-light)' : 'var(--container-bg-dark)';
+                
+                // Update text colors
+                const labels = document.querySelectorAll('label:not(.acknowledge-label)');
+                labels.forEach(label => label.style.color = isLight ? 'var(--text-color-light)' : '#ffffff');
+                
+                // Update input backgrounds and colors
+                const inputs = document.querySelectorAll('input[type="text"], input[type="password"], input[type="number"], textarea, select');
+                inputs.forEach(input => {
+                    input.style.background = isLight ? 'var(--input-bg-light)' : 'var(--input-bg-dark)';
+                    input.style.color = isLight ? 'var(--text-color-light)' : 'var(--text-color-dark)';
+                    input.style.borderColor = isLight ? 'var(--border-color-light)' : 'var(--border-color-dark)';
                 });
+                
+                // Update drag-drop zone
+                const dropZone = document.querySelector('.drag-drop-zone');
+                if (dropZone) {
+                    dropZone.style.borderColor = isLight ? 'var(--border-color-light)' : 'var(--border-color-dark)';
+                    dropZone.style.background = isLight ? 'var(--input-bg-light)' : 'var(--input-bg-dark)';
+                }
+                
+                localStorage.setItem('theme', isLight ? 'light' : 'dark');
+            }
+
+            if (savedTheme === 'light') {
+                updateTheme(true);
+            }
+
+            themeToggle.addEventListener('click', () => {
+                const isLight = !document.body.classList.contains('light-theme');
+                updateTheme(isLight);
             });
 
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('dragover');
-                const files = e.dataTransfer.files;
-                if (files.length) {
-                    fileInput.files = files;
-                    updateFileInfo(files[0]);
+            // Language toggle functionality
+            const languageToggle = document.getElementById('languageToggle');
+            const savedLanguage = localStorage.getItem('language') || 'English';
+
+            function updateLanguage(lang) {
+                const body = document.body;
+                const rtlClass = 'rtl';
+                const inputs = document.querySelectorAll('input, select, textarea');
+                if (lang === 'Persian') {
+                    body.classList.add(rtlClass);
+                    inputs.forEach(input => input.style.direction = 'ltr');
+                    document.getElementById('page-title').textContent = 'مترجم SRT به هر زبانی';
+                    document.getElementById('warning-message').textContent = '⚠️ لطفاً گزینه استفاده از پروکسی را فعال کنید تا به API Gemini دسترسی پیدا کنید اگر در ایران هستید، زیرا ایران در حال حاضر تحت تحریم است.';
+                    document.getElementById('upload-instructions').textContent = 'فایل SRT خود را بارگذاری کنید یا محتوای SRT را زیاد کنید و کلید API Gemini خود را برای ترجمه متن به هر زبانی وارد کنید.';
+                    document.getElementById('input-method-label').textContent = 'روش ورودی:';
+                    document.getElementById('file-label').textContent = 'بارگذاری فایل SRT:';
+                    document.getElementById('text-label').textContent = 'چسباندن محتوای SRT:';
+                    document.getElementById('api-key-label').textContent = 'کلید API Gemini:';
+                    document.getElementById('remember-me-label').textContent = 'یادآوری کلید API من';
+                    document.getElementById('use-proxy-label').textContent = 'استفاده از پروکسی';
+                    document.getElementById('advanced-settings-summary').textContent = 'تنظیمات پیشرفته ⚠️';
+                    document.getElementById('advanced-warning-message').textContent = '⚠️ هشدار: این تنظیمات فقط برای کاربران پیشرفته است. مقادیر نادرست ممکن است باعث شکست ترجمه یا مشکلات کوئیت API شود. با احتیاط عمل کنید.';
+                    document.getElementById('acknowledge-text').textContent = 'من ریسک ها را می فهمم و می دانم که دارم چه کاری انجام می دهم';
+                    document.getElementById('model-label').textContent = 'مدل Gemini:';
+                    document.getElementById('base-delay-label').textContent = 'تاخیر پایه (ms):';
+                    document.getElementById('quota-delay-label').textContent = 'تاخیر کوئیت (ms):';
+                    document.getElementById('chunk-count-label').textContent = 'تعداد تکه ها:';
+                    document.getElementById('translation-prompt-label').textContent = 'دستورالعمل های ترجمه:';
+                    document.getElementById('lang-label').textContent = 'زبان:';
+                    document.getElementById('lang-input').placeholder = 'زبان:';
+                    document.getElementById('submit-button').textContent = 'ترجمه';
+                    document.getElementById('api-key-note').innerHTML = "کلید API خود را از <a href='https://aistudio.google.com/' target='_blank'>Google AI Studio</a> دریافت کنید.";
+                } else {
+                    body.classList.remove(rtlClass);
+                    inputs.forEach(input => input.style.direction = 'ltr');
+                    document.getElementById('page-title').textContent = 'SRT Translator to Any Language';
+                    document.getElementById('warning-message').textContent = '⚠️ Please enable Use Proxy checkbox to access the Gemini API if you are in Iran, as Iran is currently under sanctions.';
+                    document.getElementById('upload-instructions').textContent = 'Upload an SRT file or paste SRT content and provide your Gemini API key to translate the text to any language.';
+                    document.getElementById('input-method-label').textContent = 'Input Method:';
+                    document.getElementById('file-label').textContent = 'Upload SRT File:';
+                    document.getElementById('text-label').textContent = 'Paste SRT Content:';
+                    document.getElementById('api-key-label').textContent = 'Gemini API Key:';
+                    document.getElementById('remember-me-label').textContent = 'Remember my API key';
+                    document.getElementById('use-proxy-label').textContent = 'Use Proxy';
+                    document.getElementById('advanced-settings-summary').textContent = 'Advanced Settings ⚠️';
+                    document.getElementById('advanced-warning-message').textContent = '⚠️ Warning: These settings are for advanced users only. Incorrect values may cause translation failures or API quota issues. Proceed with caution.';
+                    document.getElementById('acknowledge-text').textContent = 'I understand the risks and know what I\\'m doing';
+                    document.getElementById('model-label').textContent = 'Gemini Model:';
+                    document.getElementById('base-delay-label').textContent = 'Base Delay (ms):';
+                    document.getElementById('quota-delay-label').textContent = 'Quota Delay (ms):';
+                    document.getElementById('chunk-count-label').textContent = 'Number of Chunks:';
+                    document.getElementById('translation-prompt-label').textContent = 'Translation Instructions:';
+                    document.getElementById('lang-label').textContent = 'Language:';
+                    document.getElementById('lang-input').placeholder = 'Language:';
+                    document.getElementById('submit-button').textContent = 'Translate';
+                    document.getElementById('api-key-note').innerHTML = "Get your API key from <a href='https://aistudio.google.com/' target='_blank'>Google AI Studio</a>.";
+                }
+                localStorage.setItem('language', lang);
+            }
+
+            if (savedLanguage === 'Persian') {
+                updateLanguage('Persian');
+            }
+
+            languageToggle.addEventListener('click', () => {
+                const currentLanguage = localStorage.getItem('language') === 'Persian' ? 'English' : 'Persian';
+                updateLanguage(currentLanguage);
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    switch(e.key.toLowerCase()) {
+                        case 'b': // Toggle theme
+                            e.preventDefault();
+                            themeToggle.click();
+                            break;
+                        case 'enter': // Submit form
+                            e.preventDefault();
+                            document.getElementById('translate-form').requestSubmit();
+                            break;
+                    }
                 }
             });
 
-            fileInput.addEventListener('change', () => {
-                if (fileInput.files.length) {
-                    updateFileInfo(fileInput.files[0]);
+            function togglePasswordVisibility() {
+                const apiKeyInput = document.getElementById('api_key');
+                const toggleButton = document.querySelector('.toggle-password i');
+                if (apiKeyInput.type === 'password') {
+                    apiKeyInput.type = 'text';
+                    toggleButton.classList.remove('fa-eye');
+                    toggleButton.classList.add('fa-eye-slash');
+                } else {
+                    apiKeyInput.type = 'password';
+                    toggleButton.classList.remove('fa-eye-slash');
+                    toggleButton.classList.add('fa-eye');
                 }
+            }
+
+            function saveApiKey() {
+                const apiKeyInput = document.getElementById('api_key');
+                const rememberMeCheckbox = document.getElementById('remember_me');
+                if (rememberMeCheckbox.checked && apiKeyInput.value) {
+                    localStorage.setItem('savedApiKey', apiKeyInput.value);
+                } else {
+                    localStorage.removeItem('savedApiKey');
+                }
+            }
+
+            function loadApiKey() {
+                const apiKeyInput = document.getElementById('api_key');
+                const rememberMeCheckbox = document.getElementById('remember_me');
+                const savedApiKey = localStorage.getItem('savedApiKey');
+                if (savedApiKey) {
+                    apiKeyInput.value = savedApiKey;
+                    rememberMeCheckbox.checked = true;
+                }
+            }
+
+            window.addEventListener('load', () => {
+                loadApiKey();
+                setupDragAndDrop();
             });
 
-            document.querySelector('.remove-file').addEventListener('click', () => {
-                fileInput.value = '';
-                fileInfo.style.display = 'none';
-                dropZone.style.display = 'block';
-            });
-        }
+            function setupDragAndDrop() {
+                const dropZone = document.getElementById('dropZone');
+                const fileInput = document.getElementById('file');
+                const fileInfo = document.getElementById('file-info');
 
-        function updateFileInfo(file) {
-            const fileInfo = document.getElementById('file-info');
-            const dropZone = document.getElementById('dropZone');
-            const fileNameSpan = fileInfo.querySelector('span');
-            
-            fileNameSpan.textContent = file.name;
-            fileInfo.style.display = 'block';
-            dropZone.style.display = 'none';
-        }
+                dropZone.addEventListener('click', () => fileInput.click());
 
-        // Translation Memory store
-let translationMemory = JSON.parse(localStorage.getItem('translationMemory') || '{}');
+                dropZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('dragover');
+                });
 
-function updateTranslationMemory(sourceText, translatedText, lang) {
-    if (!translationMemory[lang]) {
-        translationMemory[lang] = {};
-    }
-    translationMemory[lang][sourceText] = translatedText;
-    localStorage.setItem('translationMemory', JSON.stringify(translationMemory));
-}
+                ['dragleave', 'dragend'].forEach(event => {
+                    dropZone.addEventListener(event, () => {
+                        dropZone.classList.remove('dragover');
+                    });
+                });
 
-function findInTranslationMemory(text, lang) {
-    return translationMemory[lang]?.[text];
-}
+                dropZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('dragover');
+                    const files = e.dataTransfer.files;
+                    if (files.length) {
+                        fileInput.files = files;
+                        updateFileInfo(files[0]);
+                    }
+                });
+
+                fileInput.addEventListener('change', () => {
+                    if (fileInput.files.length) {
+                        updateFileInfo(fileInput.files[0]);
+                    }
+                });
+
+                document.querySelector('.remove-file').addEventListener('click', () => {
+                    fileInput.value = '';
+                    fileInfo.style.display = 'none';
+                    dropZone.style.display = 'block';
+                });
+            }
+
+            function updateFileInfo(file) {
+                const fileInfo = document.getElementById('file-info');
+                const dropZone = document.getElementById('dropZone');
+                const fileNameSpan = fileInfo.querySelector('span');
+                
+                fileNameSpan.textContent = file.name;
+                fileInfo.style.display = 'block';
+                dropZone.style.display = 'none';
+            }
+
+            // Translation Memory store
+            let translationMemory = JSON.parse(localStorage.getItem('translationMemory') || '{}');
+
+            function updateTranslationMemory(sourceText, translatedText, lang) {
+                if (!translationMemory[lang]) {
+                    translationMemory[lang] = {};
+                }
+                translationMemory[lang][sourceText] = translatedText;
+                localStorage.setItem('translationMemory', JSON.stringify(translationMemory));
+            }
+
+             function findInTranslationMemory(text, lang) {
+                return translationMemory[lang]?.[text];
+            }
 
 function parseSRT(srtContent) {
             const entries = srtContent.replace(/\\n+$/, '').split('\\n\\n');
@@ -781,7 +898,7 @@ function parseSRT(srtContent) {
     // Check Translation Memory first
     const cachedTranslations = [];
     let needsTranslation = false;
-    
+
     for (const entry of chunk) {
         const cached = findInTranslationMemory(entry.text, lang);
         if (cached) {
@@ -791,7 +908,7 @@ function parseSRT(srtContent) {
             break;
         }
     }
-    
+
     // If all translations were found in memory, return them
     if (!needsTranslation) {
         console.log(\`Chunk \${chunkIndex} retrieved from Translation Memory\`);
@@ -806,7 +923,7 @@ function parseSRT(srtContent) {
     const translationPrompt = document.getElementById('translation_prompt').value.trim();
     const promptPrefix = translationPrompt
         ? \`Translate the following text to \${lang}.\\n\\n\${translationPrompt}\`
-        : \`Translate the following text to \${lang}.\\n\\nTranslate the following subtitle text into the target language while maintaining:\\n\\n1. Natural, conversational tone\\n2. Proper grammar and sentence structure\\n3. Contextual accuracy\n4. Consistent terminology\\n5. Appropriate length for on-screen display\\n\\nAvoid:\\n\\n1. Literal translations\\n2. Overly formal or bookish language\\n3. Unnatural phrasing\`;
+        : \`Translate the following text to \${lang}.\\n\\nTranslate the following subtitle text into the target language while maintaining:\\n\\n1. Natural, conversational tone\\n2. Proper grammar and sentence structure\\n3. Contextual accuracy\n4. Consistent terminology\\n5. Appropriate length for on-screen display\\n\\nAvoid:\\n\\n1. Literal translations\\n2. Overly formal or bookish language\\n3. Unnatural phrasing\\n4. Excessive wordiness\`;
 
     const payload = {
         contents: [{
@@ -924,7 +1041,7 @@ function parseSRT(srtContent) {
             const fileInput = document.getElementById('file');
             const srtText = document.getElementById('srt_text');
             const apiKey = document.getElementById('api_key').value;
-            const lang = document.getElementById('lang').value;
+            const lang = document.getElementById('lang-input').value;
             const baseDelay = parseInt(document.getElementById('base_delay').value, 10);
             const quotaDelay = parseInt(document.getElementById('quota_delay').value, 10);
             const chunkCount = parseInt(document.getElementById('chunk_count').value, 10);
