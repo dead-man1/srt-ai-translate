@@ -474,7 +474,7 @@ select {
         </div>
         <div class="container">
         <h1>SRT Translator to Any Language</h1>
-        <p style="color: #ff4444; font-weight: bold;">⚠️ Please enable Use Proxy checkbox to access the Gemini API if you are in Iran, as Iran is currently under sanctions.</p>
+        <p style="color: #ff4444; font-weight: bold;">⚠️ Please use a VPN to access the Gemini API, as Iran is currently under sanctions.</p>
         <p>Upload an SRT file or paste SRT content and provide your Gemini API key to translate the text to any language.</p>
         <form id="translate-form" onsubmit="return handleTranslate(event)">
             <label>Input Method:</label>
@@ -798,15 +798,15 @@ function parseSRT(srtContent) {
         return cachedTranslations;
     }
 
-    const directUrl = \`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}\`;
+    const directUrl = \`https://generativelanguage.googleapis.com/v1beta/models/\${model}:generateContent?key=\${apiKey}\`;
     const proxyUrl = 'https://middleman.yebekhe.workers.dev'; // Replace with your Cloudflare Worker URL
     const headers = { 'Content-Type': 'application/json' };
     const combinedText = chunk.map(entry => entry.text).join('\\n---\\n');
     console.log(\`Chunk \${chunkIndex} input (length: \${combinedText.length}): \${combinedText}\`);
     const translationPrompt = document.getElementById('translation_prompt').value.trim();
     const promptPrefix = translationPrompt
-        ? \`Translate the following text to ${lang}.\\n\\n${translationPrompt}\`
-        : \`Translate the following text to ${lang}.\\n\\nTranslate the following subtitle text into the target language while maintaining:\\n\\n1. Natural, conversational tone\\n2. Proper grammar and sentence structure\\n3. Contextual accuracy\n4. Consistent terminology\\n5. Appropriate length for on-screen display\\n\\nAvoid:\\n\\n1. Literal translations\\n2. Overly formal or bookish language\\n3. Unnatural phrasing\`;
+        ? \`Translate the following text to \${lang}.\\n\\n\${translationPrompt}\`
+        : \`Translate the following text to \${lang}.\\n\\nTranslate the following subtitle text into the target language while maintaining:\\n\\n1. Natural, conversational tone\\n2. Proper grammar and sentence structure\\n3. Contextual accuracy\n4. Consistent terminology\\n5. Appropriate length for on-screen display\\n\\nAvoid:\\n\\n1. Literal translations\\n2. Overly formal or bookish language\\n3. Unnatural phrasing\`;
 
     const payload = {
         contents: [{
