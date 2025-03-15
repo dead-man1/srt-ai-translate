@@ -507,8 +507,15 @@ select {
         <div class="container">
             <div class="top-bar">
                 <h1 id="page-title" class="page-title">SRT Translator to Any Language</h1>
-                <button id="themeToggle" aria-label="Toggle theme"><i class="fas fa-moon"></i></button>
-                <button id="languageToggle" aria-label="Toggle language"><i class="fas fa-language"></i></button>
+                <button id="themeToggle" aria-label="Toggle theme" title="Click to toggle theme">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button id="languageToggle" aria-label="Toggle language" title="Click to toggle language">
+                    <i class="fas fa-language"></i>
+                </button>
+                <button id="clear-memory-button" aria-label="Clear translation memory" title="Click to clear translation memory">
+                    <i class="fa fa-trash"></i>
+                </button>
             </div>
             <p id="warning-message" style="color: #ff4444; font-weight: bold; display: block;">⚠️ Please enable Use Proxy checkbox to access the Gemini API if you are in Iran, as Iran is currently under sanctions.</p>
             <p id="upload-instructions">Upload an SRT file or paste SRT content and provide your Gemini API key to translate the text to any language.</p>
@@ -910,8 +917,8 @@ function parseSRT(srtContent) {
     console.log(\`Chunk \${chunkIndex} input (length: \${combinedText.length}): \${combinedText}\`);
     const translationPrompt = document.getElementById('translation_prompt').value.trim();
     const promptPrefix = translationPrompt
-        ? \`Translate the following text to \${lang}.\\n\\n\${translationPrompt}\`
-        : \`Translate the following text to \${lang}.\\n\\nTranslate the following subtitle text into the target language while maintaining:\\n\\n1. Natural, conversational tone\\n2. Proper grammar and sentence structure\\n3. Contextual accuracy\n4. Consistent terminology\\n5. Appropriate length for on-screen display\\n\\nAvoid:\\n\\n1. Literal translations\\n2. Overly formal or bookish language\\n3. Unnatural phrasing\\n4. Excessive wordiness\`;
+        ?   \`Translate the following text to \${lang}.\\n\\n\${translationPrompt}\`
+        :   \`Translate the following text to \${lang}.\\n\\nTranslate the following subtitle text into the target language while maintaining:\\n\\n1. Natural, conversational tone\\n2. Proper grammar and sentence structure\\n3. Contextual accuracy\n4. Consistent terminology\\n5. Appropriate length for on-screen display\\n\\nAvoid:\\n\\n1. Literal translations\\n2. Overly formal or bookish language\\n3. Unnatural phrasing\\n4. Excessive wordiness\`;
 
     const payload = {
         contents: [{
@@ -994,7 +1001,7 @@ function parseSRT(srtContent) {
         function reconstructSRT(entries) {
             let srtContent = '';
             for (const entry of entries) {
-                srtContent += \`\${entry.id}\\n\${entry.timeStamp}\\n\${entry.text}\\n\\n\`;
+                srtContent +=  \`\${entry.id}\\n\${entry.timeStamp}\\n\${entry.text}\\n\\n\`;
             }
             return srtContent.trim();
         }
@@ -1225,6 +1232,15 @@ progressBar.style.width = '100%';
 
             return false;
         }
+
+        // Function to clear translation memory
+        function clearTranslationMemory() {
+            localStorage.removeItem('translationMemory');
+            alert('Translation memory cleared!');
+        }
+
+        // Add event listener for the clear memory button
+        document.getElementById('clear-memory-button').addEventListener('click', clearTranslationMemory);
     </script>
 </body>
 </html>
