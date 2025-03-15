@@ -503,7 +503,7 @@ select {
     </style>
 </head>
 <body>
-    
+    <div id="root">
         <div class="container">
             <div class="top-bar">
                 <h1 id="page-title" class="page-title">SRT Translator to Any Language</h1>
@@ -517,6 +517,7 @@ select {
                     <i class="fa fa-trash"></i>
                 </button>
             </div>
+            <br>
             <p id="warning-message" style="color: #ff4444; font-weight: bold; display: block;">⚠️ Please enable Use Proxy checkbox to access the Gemini API if you are in Iran, as Iran is currently under sanctions.</p>
             <p id="upload-instructions">Upload an SRT file or paste SRT content and provide your Gemini API key to translate the text to any language.</p>
             <form id="translate-form" onsubmit="return handleTranslate(event)">
@@ -837,7 +838,9 @@ Avoid:
                 const dropZone = document.getElementById('dropZone');
                 const fileNameSpan = fileInfo.querySelector('span');
                 
-                fileNameSpan.textContent = file.name;
+                const MAX_FILENAME_LENGTH = 20;
+                const truncatedFileName = file.name.length > MAX_FILENAME_LENGTH ? file.name.substring(0, MAX_FILENAME_LENGTH) + '...' : file.name;
+                fileNameSpan.textContent = truncatedFileName;
                 fileInfo.style.display = 'block';
                 dropZone.style.display = 'none';
             }
@@ -857,7 +860,7 @@ Avoid:
                 return translationMemory[lang]?.[text];
             }
 
-function parseSRT(srtContent) {
+        function parseSRT(srtContent) {
             const entries = srtContent.replace(/\\n+$/, '').split('\\n\\n');
             const parsedEntries = [];
             for (const entry of entries) {
@@ -931,11 +934,14 @@ function parseSRT(srtContent) {
 
     let attempts = 0;
     const maxAttempts = 5;
-    const useProxyCheckbox = document.getElementById('useProxyCheckbox'); // Assuming checkbox has this ID
+    const useProxyCheckbox = document.getElementById('useProxyCheckbox'); 
 
     while (attempts < maxAttempts) {
         try {
             const targetUrl = (useProxyCheckbox && useProxyCheckbox.checked) ? proxyUrl : directUrl;
+            if (targetUrl === directUrl) {
+                delete payload.endpoint; // Remove the endpoint from the payload
+            }
             const response = await fetch(targetUrl, {
                 method: 'POST',
                 headers,
@@ -1207,7 +1213,9 @@ function parseSRT(srtContent) {
                 const translatedSRT = reconstructSRT(translatedEntries);
                 const blob = new Blob([translatedSRT], { type: 'application/octet-stream' });
                 const url = URL.createObjectURL(blob);
-                downloadLink.innerHTML = \`<a href="\${url}" download="\${fileName}-\${lang}.srt">Download Translated SRT (\${translatedEntries.length} entries, \${chunks.length - failedChunks.length} of \${chunks.length} chunks translated)</a>\`;
+                const MAX_FILENAME_LENGTH = 20;
+                const truncatedFileName = fileName.length > MAX_FILENAME_LENGTH ? fileName.substring(0, MAX_FILENAME_LENGTH) + '...' : fileName;
+                downloadLink.innerHTML = \`<a href="\${url}" download="\${truncatedFileName}-\${lang}.srt">Download Translated SRT (\${translatedEntries.length} entries, \${chunks.length - failedChunks.length} of \${chunks.length} chunks translated)</a>\`;
                 downloadLink.style.display = 'block';
 
                 if (failedChunks.length > 0) {
@@ -1235,7 +1243,10 @@ progressBar.style.width = '100%';
 
         // Function to clear translation memory
         function clearTranslationMemory() {
-            localStorage.removeItem('translationMemory');
+            console.log('Clear Translation Memory function called');
+            console.log('Before setting to empty object:', localStorage.getItem('translationMemory'));
+            localStorage.setItem('translationMemory', JSON.stringify({}));
+            console.log('After setting to empty object:', localStorage.getItem('translationMemory'));
             alert('Translation memory cleared!');
         }
 
