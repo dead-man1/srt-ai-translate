@@ -474,7 +474,7 @@ select {
         </div>
         <div class="container">
         <h1>SRT Translator to Any Language</h1>
-        <p style="color: #ff4444; font-weight: bold;">⚠️ Please use a VPN to access the Gemini API, as Iran is currently under sanctions.</p>
+        <p style="color: #ff4444; font-weight: bold;">⚠️ Please enable Use Proxy checkbox to access the Gemini API if you are in Iran, as Iran is currently under sanctions.</p>
         <p>Upload an SRT file or paste SRT content and provide your Gemini API key to translate the text to any language.</p>
         <form id="translate-form" onsubmit="return handleTranslate(event)">
             <label>Input Method:</label>
@@ -514,6 +514,11 @@ select {
             <div class="remember-me">
                 <input type="checkbox" id="remember_me" name="remember_me">
                 <label for="remember_me">Remember my API key</label>
+            </div>
+
+            <div class="remember-me">
+                <input type="checkbox" id="useProxyCheckbox" name="useProxyCheckbox">
+                <label for="useProxyCheckbox">Use Proxy</label>
             </div>
 
             <details class="advanced-settings">
@@ -773,110 +778,113 @@ function parseSRT(srtContent) {
         }
 
         async function translateChunk(chunk, apiKey, baseDelay, quotaDelay, lang, chunkIndex, model) {
-            // Check Translation Memory first
-            const cachedTranslations = [];
-            let needsTranslation = false;
-            
-            for (const entry of chunk) {
-                const cached = findInTranslationMemory(entry.text, lang);
-                if (cached) {
-                    cachedTranslations.push(cached);
-                } else {
-                    needsTranslation = true;
-                    break;
+    // Check Translation Memory first
+    const cachedTranslations = [];
+    let needsTranslation = false;
+    
+    for (const entry of chunk) {
+        const cached = findInTranslationMemory(entry.text, lang);
+        if (cached) {
+            cachedTranslations.push(cached);
+        } else {
+            needsTranslation = true;
+            break;
+        }
+    }
+    
+    // If all translations were found in memory, return them
+    if (!needsTranslation) {
+        console.log(\`Chunk \${chunkIndex} retrieved from Translation Memory\`);
+        return cachedTranslations;
+    }
+
+    const directUrl = \`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}\`;
+    const proxyUrl = 'https://middleman.yebekhe.workers.dev'; // Replace with your Cloudflare Worker URL
+    const headers = { 'Content-Type': 'application/json' };
+    const combinedText = chunk.map(entry => entry.text).join('\\n---\\n');
+    console.log(\`Chunk \${chunkIndex} input (length: \${combinedText.length}): \${combinedText}\`);
+    const translationPrompt = document.getElementById('translation_prompt').value.trim();
+    const promptPrefix = translationPrompt
+        ? \`Translate the following text to ${lang}.\\n\\n${translationPrompt}\`
+        : \`Translate the following text to ${lang}.\\n\\nTranslate the following subtitle text into the target language while maintaining:\\n\\n1. Natural, conversational tone\\n2. Proper grammar and sentence structure\\n3. Contextual accuracy\n4. Consistent terminology\\n5. Appropriate length for on-screen display\\n\\nAvoid:\\n\\n1. Literal translations\\n2. Overly formal or bookish language\\n3. Unnatural phrasing\`;
+
+    const payload = {
+        contents: [{
+            parts: [{
+                text: \`\${promptPrefix} Return only the translated text, maintaining the same number of lines separated by "---", nothing else:\\n\\n\${combinedText}\`
+            }]
+        }],
+        endpoint: directUrl // Include the target endpoint for the proxy
+    };
+
+    let attempts = 0;
+    const maxAttempts = 5;
+    const useProxyCheckbox = document.getElementById('useProxyCheckbox'); // Assuming checkbox has this ID
+
+    while (attempts < maxAttempts) {
+        try {
+            const targetUrl = (useProxyCheckbox && useProxyCheckbox.checked) ? proxyUrl : directUrl;
+            const response = await fetch(targetUrl, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                if (response.status === 503) {
+                    throw new Error('Service unavailable (503) - Retrying...');
+                } else if (response.status === 429) {
+                    throw new Error('Quota exceeded (429) - Retrying...');
                 }
-            }
-            
-            // If all translations were found in memory, return them
-            if (!needsTranslation) {
-                console.log(\`Chunk \${chunkIndex} retrieved from Translation Memory\`);
-                return cachedTranslations;
+                throw new Error(\`API error: \${response.status} - \${response.statusText}\`);
             }
 
-            const url = \`https://generativelanguage.googleapis.com/v1beta/models/\${model}:generateContent?key=\${apiKey}\`;
-            const headers = { 'Content-Type': 'application/json' };
-            const combinedText = chunk.map(entry => entry.text).join('\\n---\\n');
-            console.log(\`Chunk \${chunkIndex} input (length: \${combinedText.length}): \${combinedText}\`);
-            const translationPrompt = document.getElementById('translation_prompt').value.trim();
-            const promptPrefix = translationPrompt
-                ? \`Translate the following text to \${lang}.\\n\\n\${translationPrompt}\`
-                : \`Translate the following text to \${lang}.\\n\\nTranslate the following subtitle text into the target language while maintaining:\\n\\n1. Natural, conversational tone\\n2. Proper grammar and sentence structure\\n3. Contextual accuracy\\n4. Consistent terminology\\n5. Appropriate length for on-screen display\\n\\nAvoid:\\n\\n1. Literal translations\\n2. Overly formal or bookish language\\n3. Unnatural phrasing\`;
+            const data = await response.json();
+            if (!data.candidates || !data.candidates[0].content || !data.candidates[0].content.parts[0].text) {
+                throw new Error('Invalid response from API - Ensure your API key is valid');
+            }
 
-            const payload = {
-                contents: [{
-                    parts: [{
-                        text: \`\${promptPrefix} Return only the translated text, maintaining the same number of lines separated by "---", nothing else:\\n\\n\${combinedText}\`
-                    }]
-                }]
-            };
+            await new Promise(resolve => setTimeout(resolve, baseDelay));
+            const translatedText = data.candidates[0].content.parts[0].text.trim();
+            console.log(\`Chunk \${chunkIndex} response: \${translatedText}\`);
+            const translatedLines = translatedText.split('---');
 
-            let attempts = 0;
-            const maxAttempts = 5;
+            // Store translations in memory when successful
+            chunk.forEach((entry, idx) => {
+                if (translatedLines[idx]) {
+                    updateTranslationMemory(entry.text, translatedLines[idx].trim(), lang);
+                }
+            });
 
-            while (attempts < maxAttempts) {
-                try {
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers,
-                        body: JSON.stringify(payload)
-                    });
+            if (translatedLines.length !== chunk.length) {
+                throw new Error(\`Translation response does not match chunk entry count (expected \${chunk.length}, got \${translatedLines.length})\`);
+            }
+            return translatedLines;
 
-                    if (!response.ok) {
-                        if (response.status === 503) {
-                            throw new Error('Service unavailable (503) - Retrying...');
-                        } else if (response.status === 429) {
-                            throw new Error('Quota exceeded (429) - Retrying...');
-                        }
-                        throw new Error(\`Gemini API error: \${response.status} - \${response.statusText}\`);
-                    }
-
-                    const data = await response.json();
-                    if (!data.candidates || !data.candidates[0].content || !data.candidates[0].content.parts[0].text) {
-                        // Store translations in memory when successful
-                        const translatedText = data.candidates[0].content.parts[0].text.trim();
-                        const translatedLines = translatedText.split('---');
-                        chunk.forEach((entry, idx) => {
-                            if (translatedLines[idx]) {
-                                updateTranslationMemory(entry.text, translatedLines[idx].trim(), lang);
-                            }
-                        });
-
-                        throw new Error('Invalid response from Gemini API - Ensure your API key is valid');
-                    }
-
-                    await new Promise(resolve => setTimeout(resolve, baseDelay));
-                    const translatedText = data.candidates[0].content.parts[0].text.trim();
-                    console.log(\`Chunk \${chunkIndex} response: \${translatedText}\`);
-                    const translatedLines = translatedText.split('---');
-                    if (translatedLines.length !== chunk.length) {
-                        throw new Error(\`Translation response does not match chunk entry count (expected \${chunk.length}, got \${translatedLines.length})\`);
-                    }
-                    return translatedLines;
-                } catch (error) {
-                    attempts++;
-                    if (attempts < maxAttempts) {
-                        let delay;
-                        if (error.message.includes('503')) {
-                            delay = Math.pow(2, attempts) * baseDelay;
-                            console.log(\`Retry attempt \${attempts} for 503 in chunk \${chunkIndex}: Waiting \${delay / 1000}s\`);
-                        } else if (error.message.includes('429')) {
-                            delay = quotaDelay;
-                            console.log(\`Retry attempt \${attempts} for 429 in chunk \${chunkIndex}: Waiting \${delay / 1000}s\`);
-                            throw new Error(\`Quota exceeded. Waiting \${delay / 1000} seconds before retrying...\`);
-                        } else if (error.message.includes('Translation response does not match chunk entry count')) {
-                            delay = baseDelay;
-                            console.log(\`Retry attempt \${attempts} for mismatched response in chunk \${chunkIndex}: Waiting \${delay / 1000}s\`);
-                        } else {
-                            throw error;
-                        }
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        continue;
-                    }
+        } catch (error) {
+            attempts++;
+            if (attempts < maxAttempts) {
+                let delay;
+                if (error.message.includes('503')) {
+                    delay = Math.pow(2, attempts) * baseDelay;
+                    console.log(\`Retry attempt \${attempts} for 503 in chunk \${chunkIndex}: Waiting \${delay / 1000}s\`);
+                } else if (error.message.includes('429')) {
+                    delay = quotaDelay;
+                    console.log(\`Retry attempt \${attempts} for 429 in chunk \${chunkIndex}: Waiting \${delay / 1000}s\`);
+                } else if (error.message.includes('Translation response does not match chunk entry count')) {
+                    delay = baseDelay;
+                    console.log(\`Retry attempt \${attempts} for mismatched response in chunk \${chunkIndex}: Waiting \${delay / 1000}s\`);
+                } else {
                     throw error;
                 }
+                await new Promise(resolve => setTimeout(resolve, delay));
+                continue;
             }
-            throw new Error('Max retry attempts reached');
+            throw error;
         }
+    }
+    throw new Error('Max retry attempts reached');
+}
 
         function reconstructSRT(entries) {
             let srtContent = '';
