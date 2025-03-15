@@ -684,8 +684,8 @@ Avoid:
                     body.classList.add(rtlClass);
                     inputs.forEach(input => input.style.direction = 'ltr');
                     document.getElementById('page-title').textContent = 'مترجم SRT به هر زبانی';
-                    document.getElementById('warning-message').textContent = '⚠️ لطفاً گزینه استفاده از پروکسی را فعال کنید تا به API Gemini دسترسی پیدا کنید اگر در ایران هستید، زیرا ایران در حال حاضر تحت تحریم است.';
-                    document.getElementById('upload-instructions').textContent = 'فایل SRT خود را بارگذاری کنید یا محتوای SRT را زیاد کنید و کلید API Gemini خود را برای ترجمه متن به هر زبانی وارد کنید.';
+                    document.getElementById('warning-message').textContent = '⚠️ اگر در ایران هستید لطفاً گزینه استفاده از پروکسی را فعال کنید تا به API Gemini دسترسی پیدا کنید ، زیرا ایران در حال حاضر تحت تحریم است.';
+                    document.getElementById('upload-instructions').textContent = 'فایل SRT خود را بارگذاری کنید یا محتوای SRT را وارد کنید و کلید API Gemini خود را برای ترجمه متن به هر زبانی وارد کنید.';
                     document.getElementById('input-method-label').textContent = 'روش ورودی:';
                     document.getElementById('file-label').textContent = 'بارگذاری فایل SRT:';
                     document.getElementById('text-label').textContent = 'چسباندن محتوای SRT:';
@@ -693,7 +693,7 @@ Avoid:
                     document.getElementById('remember-me-label').textContent = 'یادآوری کلید API من';
                     document.getElementById('use-proxy-label').textContent = 'استفاده از پروکسی';
                     document.getElementById('advanced-settings-summary').textContent = 'تنظیمات پیشرفته ⚠️';
-                    document.getElementById('advanced-warning-message').textContent = '⚠️ هشدار: این تنظیمات فقط برای کاربران پیشرفته است. مقادیر نادرست ممکن است باعث شکست ترجمه یا مشکلات کوئیت API شود. با احتیاط عمل کنید.';
+                    document.getElementById('advanced-warning-message').textContent = '⚠️ هشدار: این تنظیمات فقط برای کاربران حرفه ای‌تر است. مقادیر نادرست ممکن است باعث عدم ترجمه یا مشکلات در فرایند ترجمه شود. با احتیاط عمل کنید.';
                     document.getElementById('acknowledge-text').textContent = 'من ریسک ها را می فهمم و می دانم که دارم چه کاری انجام می دهم';
                     document.getElementById('model-label').textContent = 'مدل Gemini:';
                     document.getElementById('base-delay-label').textContent = 'تاخیر پایه (ms):';
