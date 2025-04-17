@@ -1,3 +1,5 @@
+# Check the latest version at [subtitle-translate](https://github.com/itsyebekhe/subtitle-translate/); since this version will not receive updates anymore!
+
 # SRT Translator to Persian (Farsi) using Gemini API
 
 This is a Cloudflare Worker script that translates SRT (SubRip Subtitle) files to Persian (Farsi) using the Google Gemini API. Users can upload an SRT file and provide their Gemini API key to get a translated version of the subtitles.
